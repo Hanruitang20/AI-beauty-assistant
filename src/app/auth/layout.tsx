@@ -1,8 +1,26 @@
+"use client";
+
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { MobileAppFrame } from "@/components/layout/mobile-app-frame";
+import { isSignedIn } from "@/lib/mock-auth";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (isSignedIn()) {
+      router.replace("/app/products");
+      return;
+    }
+    setReady(true);
+  }, [pathname, router]);
+
+  if (!ready) return null;
+
   return (
     <MobileAppFrame>
       <div className="min-h-[calc(100vh-2rem)] bg-[var(--background)] px-5 pb-8 pt-10">

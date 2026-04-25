@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signInMock } from "@/lib/mock-auth";
 
 type SignUpState = {
   name: string;
@@ -13,6 +15,7 @@ type SignUpState = {
 };
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [form, setForm] = useState<SignUpState>({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +38,14 @@ export default function SignUpPage() {
 
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 900));
+    signInMock({
+      name: form.name || "BeautyShelf 用户",
+      email: form.email,
+      id: `bs_user_${Date.now().toString().slice(-6)}`,
+    });
     setLoading(false);
     setSuccess(true);
+    router.replace("/app/onboarding");
   }
 
   return (

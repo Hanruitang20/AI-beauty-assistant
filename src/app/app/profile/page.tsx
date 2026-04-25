@@ -1,22 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getProfileDraft } from "@/lib/profile-draft";
 import { getSavedProfile } from "@/lib/profile-store";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { getStoredProducts } from "@/lib/products-store";
-
-const AUTH_KEY = "beautyshelf.mock-auth";
+import { getMockUser, signOutMock } from "@/lib/mock-auth";
 
 export default function ProfilePage() {
-  const authState = useMemo(
-    () => (typeof window !== "undefined" ? window.localStorage.getItem(AUTH_KEY) : null),
-    [],
-  );
-  const isLoggedIn = authState === "signed-in";
+  const router = useRouter();
+  const user = getMockUser();
   const savedProfile = getSavedProfile();
   const draft = getProfileDraft();
   const products = getStoredProducts();
@@ -32,14 +28,14 @@ export default function ProfilePage() {
           <div className="relative">
             <div className="h-16 w-16 rounded-full border-2 border-[var(--accent)]/30 bg-[var(--surface-soft)] p-1">
               <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--surface)] text-sm font-semibold text-[var(--accent)]">
-                {isLoggedIn ? "HR" : "游客"}
+                {(user?.name || "用户").slice(0, 2).toUpperCase()}
               </div>
             </div>
           </div>
           <div>
-            <h1 className="editorial-heading text-2xl font-semibold text-[#3c3530]">{isLoggedIn ? "Hanruitang" : "未登录用户"}</h1>
+            <h1 className="editorial-heading text-2xl font-semibold text-[#3c3530]">{user?.name || "BeautyShelf 用户"}</h1>
             <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              {isLoggedIn ? "ID: bs_user_2026_001" : "当前为本地体验模式"}
+              ID: {user?.id || "bs_user_mock"}
             </p>
           </div>
         </div>
@@ -47,66 +43,41 @@ export default function ProfilePage() {
 
       <section className="space-y-3">
         <div className="flex items-end justify-between">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Beauty Profile</h2>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">个人档案</h2>
           <Link href="/app/profile/edit" className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
-            更新
+            编辑
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="rounded-[24px]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">肤质</p>
-            <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileSkinType}</p>
-          </Card>
-          <Card className="rounded-[24px]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">敏感程度</p>
-            <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileSensitivity}</p>
-          </Card>
-          <Card className="col-span-2 rounded-[24px]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">主要诉求</p>
-            <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileMainConcerns}</p>
-          </Card>
-          <Card className="col-span-2 rounded-[24px]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">经验水平</p>
-            <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileExperience}</p>
-          </Card>
-        </div>
+        <Link href="/app/profile/edit" className="block">
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="rounded-[24px]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">肤质</p>
+              <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileSkinType}</p>
+            </Card>
+            <Card className="rounded-[24px]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">敏感程度</p>
+              <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileSensitivity}</p>
+            </Card>
+            <Card className="col-span-2 rounded-[24px]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">主要诉求</p>
+              <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileMainConcerns}</p>
+            </Card>
+            <Card className="col-span-2 rounded-[24px]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">经验水平</p>
+              <p className="mt-2 text-base font-semibold text-[var(--foreground)]">{profileExperience}</p>
+            </Card>
+          </div>
+        </Link>
       </section>
 
-      {!isLoggedIn ? (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">账号入口</h2>
-          <div className="grid gap-2">
-            <Link href="/auth/sign-in">
-              <Button className="w-full">登录</Button>
-            </Link>
-            <Link href="/auth/sign-up">
-              <Button variant="secondary" className="w-full">注册新账号</Button>
-            </Link>
-            <Link href="/app/profile/edit">
-              <Button variant="secondary" className="w-full">先完善本地个人画像</Button>
-            </Link>
-          </div>
-        </section>
-      ) : (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">账户设置</h2>
-          <div className="grid gap-2">
-            <Link href="/app/profile/edit">
-              <Button variant="secondary" className="w-full justify-start">个人信息</Button>
-            </Link>
-            <Button variant="secondary" className="w-full justify-start">AI 分析偏好（即将上线）</Button>
-            <Button variant="secondary" className="w-full justify-start">设置与安全（即将上线）</Button>
-            <Button variant="secondary" className="w-full justify-start">帮助与反馈（即将上线）</Button>
-          </div>
-        </section>
-      )}
-
-      <Card className="rounded-[24px]">
-        <FeedbackState tone="info">
-          当前本地数据：已保存 {products.length} 个产品，个人画像{savedProfile ? "已填写" : "未填写"}，测评草稿{draft ? "已存在" : "暂无"}。
-        </FeedbackState>
-      </Card>
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">账户设置</h2>
+        <div className="grid gap-2">
+          <Button variant="secondary" className="w-full justify-start">设置（即将上线）</Button>
+          <Button variant="secondary" className="w-full justify-start">帮助与反馈（即将上线）</Button>
+        </div>
+      </section>
 
       <div className="rounded-2xl bg-[var(--surface-soft)] p-4 text-sm text-[var(--foreground)]">
         <p className="font-medium">关于 BeautyShelf AI</p>
@@ -115,6 +86,17 @@ export default function ProfilePage() {
         </p>
         <p className="mt-3 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]/80">Version 2.4.1</p>
       </div>
+
+      <Button
+        variant="secondary"
+        className="w-full"
+        onClick={() => {
+          signOutMock();
+          router.replace("/auth/sign-in");
+        }}
+      >
+        退出登录
+      </Button>
     </div>
   );
 }

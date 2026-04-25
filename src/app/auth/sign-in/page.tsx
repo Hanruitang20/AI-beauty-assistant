@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signInMock } from "@/lib/mock-auth";
 
 type SignInState = {
   email: string;
@@ -12,6 +14,7 @@ type SignInState = {
 };
 
 export default function SignInPage() {
+  const router = useRouter();
   const [form, setForm] = useState<SignInState>({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +38,13 @@ export default function SignInPage() {
       return;
     }
 
+    signInMock({
+      name: form.email.split("@")[0] || "BeautyShelf 用户",
+      email: form.email,
+      id: `bs_user_${Date.now().toString().slice(-6)}`,
+    });
     setLoading(false);
+    router.replace("/app/onboarding");
   }
 
   return (

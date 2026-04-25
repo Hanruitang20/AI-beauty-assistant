@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MobileAppFrame } from "@/components/layout/mobile-app-frame";
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,25 @@ const backEnabledPatterns = [
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const headerTitle = headerTitleMap.find((item) => item.pattern.test(pathname))?.title || "BeautyShelf AI";
   const showBack = backEnabledPatterns.some((pattern) => pattern.test(pathname));
+
+  function getBackFallbackPath() {
+    if (/^\/app\/profile\/edit$/.test(pathname)) return "/app/profile";
+    if (/^\/app\/products\/new$/.test(pathname)) return "/app/products";
+    if (/^\/app\/products\/[^/]+\/edit$/.test(pathname)) return pathname.replace(/\/edit$/, "");
+    if (/^\/app\/products\/[^/]+$/.test(pathname)) return "/app/products";
+    return "/app/products";
+  }
+
+  function handleBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push(getBackFallbackPath());
+  }
 
   return (
     <MobileAppFrame>
@@ -48,11 +65,9 @@ export function AppShell({ children }: AppShellProps) {
         <header className="sticky top-0 z-20 border-b bg-[var(--surface)]/95 backdrop-blur" style={{ borderColor: "var(--border-soft)" }}>
           <div className="flex items-center justify-between px-4 pb-2 pt-4">
             {showBack ? (
-              <Link href="/app/products">
-                <Button variant="ghost" className="h-9 px-3 text-xs">
-                  返回
-                </Button>
-              </Link>
+              <Button variant="ghost" className="h-9 px-3 text-xs" onClick={handleBack}>
+                返回
+              </Button>
             ) : (
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]">
                 ⌕
