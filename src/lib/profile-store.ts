@@ -1,13 +1,15 @@
 export type SavedProfile = {
+  primaryFocus: string;
   skinType: string;
-  skinConcerns: string;
-  budgetRange: string;
-  ingredientsToAvoid: string;
-  fragrancePreference: string;
+  mainConcerns: string;
+  sensitivityLevel: string;
   preferredBrands: string[];
   dislikedBrands: string[];
   experienceLevel: string;
   skincareFamiliarity: string;
+  hasRoutine: string;
+  priorityGoal: string;
+  ingredientsToAvoid: string;
 };
 
 const PROFILE_KEY = "beautyshelf.profile";

@@ -40,17 +40,18 @@ export default function SignUpPage() {
   }
 
   return (
-    <Card className="space-y-6">
+    <Card className="space-y-6 rounded-[24px]">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-rose-950">创建账号</h1>
-        <p className="text-sm text-rose-700/80">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">开始使用</p>
+        <h1 className="editorial-heading text-3xl font-semibold tracking-tight text-[var(--foreground)]">创建账号</h1>
+        <p className="text-sm text-[var(--text-muted)]">
           不到 1 分钟，开启你的专属美妆产品库。
         </p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-rose-900">昵称</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">昵称</span>
           <Input
             type="text"
             placeholder="请输入昵称"
@@ -59,7 +60,7 @@ export default function SignUpPage() {
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-rose-900">邮箱</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">邮箱</span>
           <Input
             type="email"
             placeholder="请输入邮箱"
@@ -68,7 +69,7 @@ export default function SignUpPage() {
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-rose-900">密码</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">密码</span>
           <Input
             type="password"
             placeholder="至少 8 位"
@@ -78,7 +79,7 @@ export default function SignUpPage() {
         </label>
 
         {!form.name && !form.email && !form.password ? (
-          <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-600">
+          <p className="rounded-xl bg-[var(--surface-soft)] px-3 py-2 text-xs text-[var(--text-muted)]">
             注册后即可进入 onboarding 并获得个性化建议。
           </p>
         ) : null}
@@ -100,9 +101,9 @@ export default function SignUpPage() {
         </Button>
       </form>
 
-      <p className="pt-1 text-center text-sm text-rose-700/80">
+      <p className="pt-1 text-center text-sm text-[var(--text-muted)]">
         已有账号？{" "}
-        <Link href="/auth/sign-in" className="font-medium text-rose-800 hover:text-rose-950">
+        <Link href="/auth/sign-in" className="font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]">
           去登录
         </Link>
       </p>

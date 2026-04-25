@@ -20,7 +20,7 @@ export default function OnboardingPage() {
               适合已经了解自己肤质、偏好和护肤目标的你。
             </p>
           </div>
-          <Link href="/app/profile">
+          <Link href="/app/profile/edit">
             <Button className="w-full">去填写档案</Button>
           </Link>
         </Card>

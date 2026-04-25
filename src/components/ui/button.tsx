@@ -9,10 +9,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClassMap: Record<ButtonVariant, string> = {
   primary:
-    "bg-rose-500 text-white hover:bg-rose-600 shadow-sm disabled:bg-rose-300 active:scale-[0.99]",
+    "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)] shadow-sm disabled:opacity-50 active:scale-[0.99]",
   secondary:
-    "bg-white text-rose-800 border border-rose-200 hover:bg-rose-50 disabled:text-rose-400 active:scale-[0.99]",
-  ghost: "text-rose-700 hover:bg-rose-100/70 active:scale-[0.99]",
+    "bg-[var(--surface)] border text-[var(--foreground)] hover:bg-[var(--surface-soft)] disabled:opacity-50 active:scale-[0.99]",
+  ghost: "text-[var(--text-muted)] hover:bg-[var(--surface-soft)] active:scale-[0.99]",
   danger: "bg-red-500 text-white hover:bg-red-600 shadow-sm disabled:bg-red-300 active:scale-[0.99]",
 };
 
@@ -30,6 +30,7 @@ export function Button({
         variantClassMap[variant],
         className,
       )}
+      style={variant === "secondary" ? { borderColor: "var(--border-soft)" } : undefined}
       {...props}
     />
   );

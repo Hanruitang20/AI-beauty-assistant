@@ -51,9 +51,13 @@ type Answers = Record<string, string>;
 export default function AssessmentPage() {
   const router = useRouter();
   const [answers, setAnswers] = useState<Answers>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
-  const progress = Math.round((Object.keys(answers).length / questions.length) * 100);
+  const currentQuestion = questions[currentIndex];
+  const isLastQuestion = currentIndex === questions.length - 1;
+  const answeredCount = Object.keys(answers).length;
+  const progress = Math.round(((submitted ? questions.length : currentIndex + 1) / questions.length) * 100);
 
   const summary = useMemo(() => {
     if (!submitted) return null;
@@ -83,6 +87,21 @@ export default function AssessmentPage() {
   }, [answers, submitted]);
 
   const canSubmit = questions.every((question) => answers[question.id]);
+  const canGoNext = Boolean(answers[currentQuestion.id]);
+
+  function handleNext() {
+    if (!canGoNext) return;
+    if (isLastQuestion) {
+      setSubmitted(true);
+      return;
+    }
+    setCurrentIndex((prev) => prev + 1);
+  }
+
+  function handlePrev() {
+    if (currentIndex === 0) return;
+    setCurrentIndex((prev) => prev - 1);
+  }
 
   function handleApplyToProfile() {
     if (!summary) return;
@@ -109,75 +128,82 @@ export default function AssessmentPage() {
       ingredientsToAvoid,
     });
 
-    router.push("/app/profile?source=assessment");
+    router.push("/app/profile/edit?source=assessment");
   }
 
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-rose-950">快速肤质与护肤习惯测评</h1>
-        <p className="text-sm text-rose-700/80">
+        <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">快速肤质与护肤习惯测评</h1>
+        <p className="text-sm text-[var(--text-muted)]">
           保持轻量。回答 6 个日常问题，快速获得一份可用的初始档案。
         </p>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-rose-100">
-          <div className="h-full rounded-full bg-rose-400 transition-all" style={{ width: `${progress}%` }} />
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-soft)]">
+          <div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${progress}%` }} />
         </div>
-        <p className="text-xs text-rose-600">已完成 {progress}%</p>
+        <p className="text-xs text-[var(--text-muted)]">
+          第 {submitted ? questions.length : currentIndex + 1} / {questions.length} 题 · 已回答 {answeredCount} 题
+        </p>
       </div>
 
-      <Card className="space-y-5">
-        {questions.map((question, index) => (
-          <div key={question.id} className="space-y-2">
-            <p className="text-sm font-medium text-rose-900">
-              {index + 1}. {question.prompt}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {question.options.map((option) => {
-                const active = answers[question.id] === option;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: option }))}
-                    className={`rounded-full border px-3 py-2 text-sm transition ${
-                      active
-                        ? "border-rose-300 bg-rose-100 text-rose-800"
-                        : "border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-
-        <Button className="w-full" onClick={() => setSubmitted(true)} disabled={!canSubmit}>
-          查看我的测评结果
-        </Button>
+      <Card className="space-y-5 rounded-[24px]">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            问题 {currentIndex + 1}
+          </p>
+          <p className="text-lg font-semibold text-[var(--foreground)]">{currentQuestion.prompt}</p>
+        </div>
+        <div className="grid gap-2">
+          {currentQuestion.options.map((option) => {
+            const active = answers[currentQuestion.id] === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setAnswers((prev) => ({ ...prev, [currentQuestion.id]: option }))}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm ${
+                  active
+                    ? "bg-[var(--surface-soft)] text-[var(--accent)]"
+                    : "bg-[var(--surface)] text-[var(--foreground)]"
+                }`}
+                style={{ borderColor: active ? "var(--focus-ring)" : "var(--border-soft)" }}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" className="w-full" onClick={handlePrev} disabled={currentIndex === 0}>
+            上一题
+          </Button>
+          <Button className="w-full" onClick={handleNext} disabled={!canGoNext}>
+            {isLastQuestion ? "查看测评结果" : "下一题"}
+          </Button>
+        </div>
+        {!canSubmit ? <p className="text-xs text-[var(--text-muted)]">完成全部题目后可查看完整结果。</p> : null}
       </Card>
 
       {submitted && summary ? (
-        <Card className="space-y-4">
-          <h2 className="text-xl font-semibold text-rose-950">你的初始结果</h2>
+        <Card className="space-y-4 rounded-[24px]">
+          <h2 className="editorial-heading text-xl font-semibold text-[var(--foreground)]">你的初始结果</h2>
           <div className="grid gap-3 text-sm">
-            <div className="rounded-2xl bg-rose-50 p-4">
-              <p className="text-xs text-rose-600">可能的肤质类型</p>
-              <p className="mt-1 font-semibold text-rose-900">{summary.skinType}</p>
+            <div className="rounded-2xl bg-[var(--surface-soft)] p-4">
+              <p className="text-xs text-[var(--text-muted)]">可能的肤质类型</p>
+              <p className="mt-1 font-semibold text-[var(--foreground)]">{summary.skinType}</p>
             </div>
-            <div className="rounded-2xl bg-rose-50 p-4">
-              <p className="text-xs text-rose-600">核心关注点</p>
-              <p className="mt-1 font-semibold text-rose-900">{summary.primaryConcerns.join(", ")}</p>
+            <div className="rounded-2xl bg-[var(--surface-soft)] p-4">
+              <p className="text-xs text-[var(--text-muted)]">核心关注点</p>
+              <p className="mt-1 font-semibold text-[var(--foreground)]">{summary.primaryConcerns.join(", ")}</p>
             </div>
-            <div className="rounded-2xl bg-rose-50 p-4">
-              <p className="text-xs text-rose-600">护肤经验水平</p>
-              <p className="mt-1 font-semibold text-rose-900">{summary.experienceLevel}</p>
+            <div className="rounded-2xl bg-[var(--surface-soft)] p-4">
+              <p className="text-xs text-[var(--text-muted)]">护肤经验水平</p>
+              <p className="mt-1 font-semibold text-[var(--foreground)]">{summary.experienceLevel}</p>
             </div>
           </div>
           <div className="grid gap-2">
             <Button className="w-full" onClick={handleApplyToProfile}>一键应用到档案</Button>
-            <Link href="/app/profile">
+            <Link href="/app/profile/edit">
               <Button variant="secondary" className="w-full">改为手动编辑档案</Button>
             </Link>
           </div>

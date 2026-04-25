@@ -18,6 +18,7 @@ import {
   getSummaryByProductId,
   ProductSummary,
   saveSummaryByProductId,
+  markProductViewed,
 } from "@/lib/products-store";
 import { ProductSummaryPanel } from "@/components/products/product-summary-panel";
 import { FeedbackState } from "@/components/ui/feedback-state";
@@ -43,6 +44,12 @@ export default function ProductDetailPage() {
     }
   }, [searchParams, showToast]);
 
+  useEffect(() => {
+    if (product) {
+      markProductViewed(product.id);
+    }
+  }, [product]);
+
   async function handleGenerateSummary() {
     if (!product) return;
     setLoadingSummary(true);
@@ -65,8 +72,8 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <Card className="space-y-4">
-        <h1 className="text-2xl font-semibold text-rose-950">未找到该产品</h1>
-        <p className="text-sm text-rose-700/80">
+        <h1 className="editorial-heading text-2xl font-semibold text-[var(--foreground)]">未找到该产品</h1>
+        <p className="text-sm text-[var(--text-muted)]">
           本地数据中未找到该产品，请返回产品库查看。
         </p>
         <Link href="/app/products">
@@ -77,11 +84,23 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 pb-6">
+      <div className="relative aspect-square w-full overflow-hidden rounded-[24px] border bg-[var(--surface-soft)] shadow-[0_4px_24px_rgba(60,53,48,0.04)]" style={{ borderColor: "var(--border-soft)" }}>
+        <div className="flex h-full w-full items-center justify-center text-sm text-[var(--text-muted)]">
+          产品视觉占位图
+        </div>
+        <div className="absolute right-4 top-4">
+          <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
+            {productStatusLabelMap[product.status]}
+          </span>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <div>
-          <p className="text-xs uppercase tracking-wide text-rose-500">产品详情</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-rose-950">{product.name}</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">{productCategoryLabelMap[product.category]}</p>
+          <h1 className="editorial-heading text-[30px] font-semibold tracking-tight text-[#3c3530]">{product.name}</h1>
+          <p className="text-sm text-[var(--text-muted)]">{product.brand} · {productCategoryLabelMap[product.category]}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Link href={`/app/products/${product.id}/edit`}>
@@ -93,38 +112,38 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      <Card className="space-y-4">
+      <Card className="space-y-4 rounded-[24px]">
         <div className="grid gap-3 text-sm">
           <div>
-            <p className="text-xs uppercase tracking-wide text-rose-500">品牌</p>
-            <p className="mt-1 font-medium text-rose-900">{product.brand}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">品牌</p>
+            <p className="mt-1 font-medium text-[var(--foreground)]">{product.brand}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-rose-500">品类</p>
-            <p className="mt-1 font-medium text-rose-900">{productCategoryLabelMap[product.category]}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">品类</p>
+            <p className="mt-1 font-medium text-[var(--foreground)]">{productCategoryLabelMap[product.category]}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-rose-500">来源类型</p>
-            <p className="mt-1 font-medium text-rose-900">{sourceTypeLabelMap[product.sourceType]}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-rose-500">状态</p>
-            <p className="mt-1 inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">状态</p>
+            <p className="mt-1 inline-flex rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent)]">
               {productStatusLabelMap[product.status]}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-rose-500">备注</p>
-            <p className="mt-1 text-rose-800">{product.note || "暂时还没有备注。"}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">来源类型</p>
+            <p className="mt-1 font-medium text-[var(--foreground)]">{sourceTypeLabelMap[product.sourceType]}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">备注</p>
+            <p className="mt-1 text-[var(--foreground)]">{product.note || "暂时还没有备注。"}</p>
           </div>
           {product.sourceLink ? (
             <div>
-              <p className="text-xs uppercase tracking-wide text-rose-500">来源链接</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">来源链接</p>
               <a
                 href={product.sourceLink}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-block text-sm text-rose-700 underline decoration-rose-300 underline-offset-4 hover:text-rose-900"
+                className="mt-1 inline-block text-sm text-[var(--accent)] underline underline-offset-4 hover:text-[var(--accent-strong)]"
               >
                 打开来源链接
               </a>
@@ -136,9 +155,9 @@ export default function ProductDetailPage() {
       <ProductSummaryPanel summary={summary} loading={loadingSummary} onGenerate={handleGenerateSummary} />
       {summaryStatusText ? <FeedbackState tone={loadingSummary ? "info" : "success"}>{summaryStatusText}</FeedbackState> : null}
 
-      <Card className="space-y-3 border-red-100">
-        <h2 className="text-lg font-semibold text-rose-950">危险操作</h2>
-        <p className="text-sm text-rose-700/80">
+      <Card className="space-y-3 rounded-[24px]" style={{ background: "color-mix(in oklab, var(--danger-soft) 26%, white)" }}>
+        <h2 className="text-lg font-semibold text-[var(--danger-text)]">危险操作</h2>
+        <p className="text-sm text-[var(--text-muted)]">
           如果你不再需要这个产品，可以在这里删除。
         </p>
         {showDeleteConfirm ? (

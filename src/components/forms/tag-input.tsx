@@ -29,7 +29,7 @@ export function TagInput({ label, placeholder, values, onChange }: TagInputProps
 
   return (
     <label className="block space-y-2">
-      <span className="text-sm font-medium text-rose-900">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">{label}</span>
       <Input
         value={draft}
         placeholder={placeholder}
@@ -43,7 +43,7 @@ export function TagInput({ label, placeholder, values, onChange }: TagInputProps
             <button
               key={tag}
               type="button"
-              className="rounded-full bg-rose-100 px-3 py-1 text-xs text-rose-800"
+              className="rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs text-[var(--accent-strong)]"
               onClick={() => onChange(values.filter((value) => value !== tag))}
               title="点击移除"
             >

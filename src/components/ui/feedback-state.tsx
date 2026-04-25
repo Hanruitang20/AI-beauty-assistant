@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 type FeedbackTone = "success" | "error" | "info" | "warning";
 
 const toneClass: Record<FeedbackTone, string> = {
-  success: "border-emerald-100 bg-emerald-50 text-emerald-700",
-  error: "border-red-100 bg-red-50 text-red-700",
-  info: "border-rose-200 bg-rose-50 text-rose-700",
-  warning: "border-amber-100 bg-amber-50 text-amber-700",
+  success: "border-emerald-200 bg-emerald-50/80 text-emerald-800",
+  error: "border-red-200 bg-red-50/80 text-red-800",
+  info: "border-[var(--border-soft)] bg-[var(--surface-soft)] text-[var(--text-muted)]",
+  warning: "border-amber-200 bg-amber-50/80 text-amber-800",
 };
 
 type FeedbackStateProps = {

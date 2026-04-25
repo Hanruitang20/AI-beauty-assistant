@@ -39,17 +39,18 @@ export default function SignInPage() {
   }
 
   return (
-    <Card className="space-y-6">
+    <Card className="space-y-6 rounded-[24px]">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-rose-950">登录</h1>
-        <p className="text-sm text-rose-700/80">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">欢迎回来</p>
+        <h1 className="editorial-heading text-3xl font-semibold tracking-tight text-[var(--foreground)]">登录</h1>
+        <p className="text-sm text-[var(--text-muted)]">
           继续管理你的产品库与护肤档案。
         </p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-rose-900">邮箱</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">邮箱</span>
           <Input
             type="email"
             placeholder="请输入邮箱"
@@ -58,7 +59,7 @@ export default function SignInPage() {
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-rose-900">密码</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">密码</span>
           <Input
             type="password"
             placeholder="请输入密码"
@@ -68,7 +69,7 @@ export default function SignInPage() {
         </label>
 
         {!form.email && !form.password ? (
-          <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-600">
+          <p className="rounded-xl bg-[var(--surface-soft)] px-3 py-2 text-xs text-[var(--text-muted)]">
             先填写你的账号信息。
           </p>
         ) : null}
@@ -84,9 +85,9 @@ export default function SignInPage() {
         </Button>
       </form>
 
-      <p className="pt-1 text-center text-sm text-rose-700/80">
+      <p className="pt-1 text-center text-sm text-[var(--text-muted)]">
         还没有账号？{" "}
-        <Link href="/auth/sign-up" className="font-medium text-rose-800 hover:text-rose-950">
+        <Link href="/auth/sign-up" className="font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]">
           立即注册
         </Link>
       </p>

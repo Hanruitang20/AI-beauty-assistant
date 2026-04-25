@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Manrope, Noto_Serif, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-body",
+  subsets: ["latin"],
+});
+
+const notoSerif = Noto_Serif({
+  variable: "--font-heading",
   subsets: ["latin"],
 });
 
@@ -25,9 +30,9 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${notoSerif.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-rose-50 text-rose-950">
+      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
         {children}
       </body>
     </html>

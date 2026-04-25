@@ -58,7 +58,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">产品名称 *</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">产品名称 *</span>
         <Input
           value={form.productName}
           placeholder="例如：积雪草修护面霜"
@@ -67,7 +67,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">品牌 *</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">品牌 *</span>
         <Input
           value={form.brand}
           placeholder="例如：Skin1004"
@@ -76,7 +76,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">品类 *</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">品类 *</span>
         <Select
           value={form.category}
           onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value as ProductCategory }))}
@@ -91,7 +91,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">状态 *</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">状态 *</span>
         <Select
           value={form.status}
           onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as ProductStatus }))}
@@ -105,7 +105,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">来源类型 *</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">来源类型 *</span>
         <Select
           value={form.sourceType}
           onChange={(event) => setForm((prev) => ({ ...prev, sourceType: event.target.value as SourceType }))}
@@ -119,7 +119,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">来源链接（可选）</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">来源链接（可选）</span>
         <Input
           value={form.sourceLink}
           placeholder="https://..."
@@ -128,7 +128,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-rose-900">备注（可选）</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">备注（可选）</span>
         <Textarea
           rows={4}
           value={form.note}
@@ -144,7 +144,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
         </FeedbackState>
       ) : null}
 
-      <div className="sticky bottom-20 z-10 bg-white/80 py-2 backdrop-blur">
+      <div className="sticky bottom-20 z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
         <Button className="w-full" type="submit" disabled={saving}>
           {saving ? "保存中..." : submitLabel || (mode === "create" ? "保存产品" : "保存修改")}
         </Button>

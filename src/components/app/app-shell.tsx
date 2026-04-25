@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 
 const bottomNavItems = [
   { href: "/app/products", label: "产品库" },
-  { href: "/app/recommendations", label: "推荐" },
-  { href: "/app/profile", label: "档案" },
+  { href: "/app/recommendations", label: "为你" },
+  { href: "/app/profile", label: "个人" },
 ];
 
 type AppShellProps = {
@@ -22,14 +22,20 @@ const headerTitleMap: Array<{ pattern: RegExp; title: string }> = [
   { pattern: /^\/app\/products\/[^/]+\/edit$/, title: "编辑产品" },
   { pattern: /^\/app\/products\/[^/]+$/, title: "产品详情" },
   { pattern: /^\/app\/products$/, title: "产品库" },
-  { pattern: /^\/app\/recommendations$/, title: "推荐建议" },
-  { pattern: /^\/app\/profile$/, title: "个人档案" },
+  { pattern: /^\/app\/recommendations$/, title: "为你" },
+  { pattern: /^\/app\/profile\/edit$/, title: "编辑个人画像" },
+  { pattern: /^\/app\/profile$/, title: "个人中心" },
   { pattern: /^\/app\/assessment$/, title: "快速测评" },
   { pattern: /^\/app\/onboarding$/, title: "开始设置" },
   { pattern: /^\/app$/, title: "BeautyShelf AI" },
 ];
 
-const backEnabledPatterns = [/^\/app\/products\/new$/, /^\/app\/products\/[^/]+$/, /^\/app\/products\/[^/]+\/edit$/];
+const backEnabledPatterns = [
+  /^\/app\/products\/new$/,
+  /^\/app\/products\/[^/]+$/,
+  /^\/app\/products\/[^/]+\/edit$/,
+  /^\/app\/profile\/edit$/,
+];
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
@@ -38,9 +44,9 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <MobileAppFrame>
-      <div className="relative min-h-[calc(100vh-2rem)] bg-gradient-to-b from-rose-50 via-white to-pink-50">
-        <header className="sticky top-0 z-20 border-b border-rose-100 bg-white/95 backdrop-blur">
-          <div className="flex items-center justify-between px-4 pb-3 pt-4">
+      <div className="relative min-h-[calc(100vh-2rem)] bg-[var(--background)]">
+        <header className="sticky top-0 z-20 border-b bg-[var(--surface)]/95 backdrop-blur" style={{ borderColor: "var(--border-soft)" }}>
+          <div className="flex items-center justify-between px-4 pb-2 pt-4">
             {showBack ? (
               <Link href="/app/products">
                 <Button variant="ghost" className="h-9 px-3 text-xs">
@@ -48,28 +54,38 @@ export function AppShell({ children }: AppShellProps) {
                 </Button>
               </Link>
             ) : (
-              <Link href="/" className="text-sm font-semibold tracking-tight text-rose-900">
-                BeautyShelf AI
-              </Link>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]">
+                ⌕
+              </span>
             )}
-            <h1 className="text-sm font-semibold text-rose-900">{headerTitle}</h1>
-            <div className="w-16" />
+            <Link href="/" className="editorial-heading text-lg font-semibold italic tracking-tight text-[#3c3530]">
+              BeautyShelf AI
+            </Link>
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]">
+              🔔
+            </span>
+          </div>
+          <div className="px-4 pb-3">
+            <h1 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{headerTitle}</h1>
           </div>
         </header>
 
-        <main className="px-4 pb-24 pt-4">{children}</main>
+        <main className="px-4 pb-28 pt-5">{children}</main>
 
-        <nav className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-[398px] -translate-x-1/2 rounded-2xl border border-rose-100 bg-white/95 p-2 shadow-lg backdrop-blur">
-          <div className="grid grid-cols-3 gap-1">
+        <nav
+          className="fixed inset-x-0 bottom-0 z-30 border-t bg-[var(--surface)]/95 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur transition-none"
+          style={{ borderColor: "var(--border-soft)" }}
+        >
+          <div className="mx-auto grid w-full max-w-[430px] grid-cols-3 gap-1">
             {bottomNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-xl px-2 py-2 text-center text-xs font-medium transition",
+                  "rounded-xl px-2 py-2 text-center text-[11px] font-semibold tracking-[0.08em] transition-none",
                   pathname.startsWith(item.href)
-                    ? "bg-rose-100 text-rose-900 shadow-sm"
-                    : "text-rose-600 hover:bg-rose-50",
+                    ? "bg-[var(--surface-soft)] text-[var(--accent)]"
+                    : "text-[var(--text-muted)]",
                 )}
               >
                 {item.label}

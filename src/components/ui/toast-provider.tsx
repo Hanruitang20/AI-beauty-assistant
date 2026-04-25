@@ -21,9 +21,9 @@ type ToastContextValue = {
 };
 
 const toastToneClass: Record<ToastTone, string> = {
-  success: "border-emerald-100 bg-emerald-50 text-emerald-700",
-  error: "border-red-100 bg-red-50 text-red-700",
-  info: "border-rose-200 bg-white text-rose-800",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  error: "border-red-200 bg-red-50 text-red-800",
+  info: "border-[var(--border-soft)] bg-[var(--surface)] text-[var(--foreground)]",
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);

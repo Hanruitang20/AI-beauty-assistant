@@ -6,9 +6,10 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        "w-full min-h-11 rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm text-rose-900 shadow-sm outline-none transition placeholder:text-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-200",
+        "w-full min-h-11 rounded-xl border bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--foreground)] shadow-sm outline-none transition placeholder:text-[var(--text-muted)]/70 focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[var(--focus-ring)]/40",
         props.className,
       )}
+      style={{ borderColor: "var(--border-soft)", boxShadow: "0 2px 8px -6px rgba(58,52,47,0.3)" }}
     />
   );
 }
@@ -18,9 +19,10 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...props}
       className={cn(
-        "w-full min-h-11 rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm text-rose-900 shadow-sm outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200",
+        "w-full min-h-11 rounded-xl border bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--foreground)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[var(--focus-ring)]/40",
         props.className,
       )}
+      style={{ borderColor: "var(--border-soft)", boxShadow: "0 2px 8px -6px rgba(58,52,47,0.3)" }}
     />
   );
 }
@@ -30,9 +32,10 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
     <textarea
       {...props}
       className={cn(
-        "w-full rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm text-rose-900 shadow-sm outline-none transition placeholder:text-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-200",
+        "w-full rounded-xl border bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--foreground)] shadow-sm outline-none transition placeholder:text-[var(--text-muted)]/70 focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[var(--focus-ring)]/40",
         props.className,
       )}
+      style={{ borderColor: "var(--border-soft)", boxShadow: "0 2px 8px -6px rgba(58,52,47,0.3)" }}
     />
   );
 }

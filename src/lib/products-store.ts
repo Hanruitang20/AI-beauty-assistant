@@ -2,6 +2,7 @@ import { BeautyProduct, mockProducts, productCategoryLabelMap, productStatusLabe
 
 const PRODUCTS_KEY = "beautyshelf.products";
 const SUMMARY_KEY = "beautyshelf.product-summaries";
+const RECENT_VIEWED_KEY = "beautyshelf.recent-viewed-products";
 
 export type ProductSummary = {
   whatFor: string;
@@ -48,6 +49,25 @@ export function saveProducts(products: BeautyProduct[]) {
   window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
 }
 
+export function getRecentViewedProductIds() {
+  if (!hasWindow()) return [];
+  const raw = window.localStorage.getItem(RECENT_VIEWED_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as string[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markProductViewed(id: string) {
+  if (!hasWindow()) return;
+  const existing = getRecentViewedProductIds().filter((item) => item !== id);
+  const next = [id, ...existing].slice(0, 8);
+  window.localStorage.setItem(RECENT_VIEWED_KEY, JSON.stringify(next));
+}
+
 export function createProduct(input: Omit<BeautyProduct, "id">) {
   const nextProduct: BeautyProduct = {
     ...input,
@@ -83,6 +103,11 @@ export function deleteProductById(id: string) {
     if (hasWindow()) {
       window.localStorage.setItem(SUMMARY_KEY, JSON.stringify(rest));
     }
+  }
+
+  const recent = getRecentViewedProductIds().filter((item) => item !== id);
+  if (hasWindow()) {
+    window.localStorage.setItem(RECENT_VIEWED_KEY, JSON.stringify(recent));
   }
 }
 

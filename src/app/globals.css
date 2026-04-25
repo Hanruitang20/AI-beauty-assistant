@@ -1,19 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff8fb;
-  --foreground: #3a2330;
+  --background: #faf9f6;
+  --foreground: #201a16;
+  --surface: #ffffff;
+  --surface-soft: #f4f3f1;
+  --border-soft: #e5e1da;
+  --text-muted: #655d57;
+  --accent: #79534a;
+  --accent-strong: #613e36;
+  --focus-ring: #a67b71;
+  --surface-dim: #dbdad7;
+  --danger-soft: #ffdad6;
+  --danger-text: #93000a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-body), sans-serif;
+}
+
+.editorial-heading {
+  font-family: var(--font-heading), Georgia, Cambria, "Times New Roman", Times, serif;
+  letter-spacing: -0.01em;
 }

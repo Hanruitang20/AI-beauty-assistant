@@ -16,6 +16,7 @@ import {
   sourceTypeLabelMap,
 } from "@/lib/products";
 import { getStoredProducts, saveProducts } from "@/lib/products-store";
+import { getRecentViewedProductIds, getSummaryMap } from "@/lib/products-store";
 import { useToast } from "@/components/ui/toast-provider";
 
 type Filters = {
@@ -35,7 +36,8 @@ export default function ProductsPage() {
   const { showToast } = useToast();
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [query, setQuery] = useState("");
-  const [items, setItems] = useState<BeautyProduct[]>(() => getStoredProducts());
+  const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const deletedToastShownRef = useRef(false);
 
   useEffect(() => {
@@ -57,6 +59,21 @@ export default function ProductsPage() {
   }, [filters, query, items]);
 
   const isEmpty = items.length === 0;
+  const summaryMap = getSummaryMap();
+  const recentAdded = items.slice(0, 4);
+  const recentViewed = getRecentViewedProductIds()
+    .map((id) => items.find((item) => item.id === id))
+    .filter((item): item is BeautyProduct => Boolean(item))
+    .slice(0, 4);
+  const focusItems = items.filter((item) => item.status === "wishlist" || item.status === "recommended").slice(0, 4);
+  const summarizedItems = items.filter((item) => Boolean(summaryMap[item.id])).slice(0, 4);
+  const needLearnMore = items.filter((item) => !summaryMap[item.id]).slice(0, 4);
+  const categoryEntries = [
+    { key: "护肤", count: items.filter((item) => ["cleanser", "serum", "moisturizer", "sunscreen"].includes(item.category)).length },
+    { key: "身体护理", count: 0 },
+    { key: "头发护理", count: 0 },
+    { key: "彩妆", count: items.filter((item) => item.category === "makeup").length },
+  ];
   const createdProductName = searchParams.get("created");
   const deleted = searchParams.get("deleted");
 
@@ -68,18 +85,19 @@ export default function ProductsPage() {
   }, [deleted, showToast]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-7">
       <div className="space-y-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-rose-950">我的产品库</h1>
-          <p className="mt-1 text-sm text-rose-700/80">你的个人美妆护肤清单，清晰可检索。</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">欢迎回来</p>
+          <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">我的产品库</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">这里不是简单列表，而是你的选品与决策中枢。</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={() => setItems([])}>
-            演示空状态
+          <Button variant="secondary" onClick={() => setShowAllProducts((prev) => !prev)}>
+            {showAllProducts ? "收起全部产品" : "查看全部产品"}
           </Button>
-          <Link href="/app/products/new">
-            <Button className="w-full">新增产品</Button>
+          <Link href="/app/assessment">
+            <Button variant="secondary" className="w-full">开始快速测评</Button>
           </Link>
         </div>
       </div>
@@ -90,7 +108,7 @@ export default function ProductsPage() {
         </FeedbackState>
       ) : null}
 
-      <Card className="space-y-4">
+      <Card className="space-y-4 rounded-[24px]">
         <div className="grid gap-2">
           <Input placeholder="搜索产品名或品牌" value={query} onChange={(event) => setQuery(event.target.value)} />
           <Select
@@ -122,13 +140,21 @@ export default function ProductsPage() {
             onChange={(event) => setFilters((prev) => ({ ...prev, brand: event.target.value }))}
           />
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" className="text-xs" onClick={() => setFilters((prev) => ({ ...prev, status: "recommended" }))}>
+            快捷筛选：被推荐
+          </Button>
+          <Button variant="secondary" className="text-xs" onClick={() => setFilters((prev) => ({ ...prev, status: "wishlist" }))}>
+            快捷筛选：想购买
+          </Button>
+        </div>
       </Card>
 
       {isEmpty ? (
-        <Card className="text-center">
-          <h2 className="text-xl font-semibold text-rose-900">你的产品库还是空的</h2>
-          <p className="mt-2 text-sm text-rose-700/80">
-            先添加一个你正在使用的产品，慢慢建立自己的长期产品记录。
+        <Card className="rounded-[24px] text-center">
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">暂无产品</h2>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            你还没有添加任何产品。这里会用于整理你用过、被推荐过、感兴趣的产品，并给出后续决策线索。
           </p>
           <div className="mt-4">
             <Link href="/app/products/new">
@@ -138,38 +164,98 @@ export default function ProductsPage() {
         </Card>
       ) : (
         <div className="grid gap-3">
-          {filteredProducts.length === 0 ? (
-            <Card className="p-4">
-              <FeedbackState>没有匹配当前搜索和筛选条件的产品。</FeedbackState>
+          <ProductsSection title="最近添加" items={recentAdded} />
+          <ProductsSection title="最近查看" items={recentViewed} emptyText="你最近还没有查看过产品详情。" />
+          <ProductsSection title="当前关注（想购买 / 被推荐）" items={focusItems} />
+          <Card className="space-y-3 rounded-[24px]">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">分类入口</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {categoryEntries.map((entry) => (
+                <div key={entry.key} className="rounded-xl bg-[var(--surface-soft)] p-3 text-sm">
+                  <p className="font-medium text-[var(--foreground)]">{entry.key}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{entry.count} 个产品</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+          <ProductsSection title="已生成摘要的产品" items={summarizedItems} emptyText="还没有已生成摘要的产品，可在详情页生成。" />
+          <ProductsSection title="待进一步了解的产品" items={needLearnMore} emptyText="当前产品都已有摘要，做得很好。" />
+
+          {showAllProducts ? (
+            <Card className="space-y-3 rounded-[24px]">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">全部产品</h3>
+              {filteredProducts.length === 0 ? (
+                <FeedbackState>没有匹配当前搜索和筛选条件的产品。</FeedbackState>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredProducts.map((product) => (
+                    <ProductListItem key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
             </Card>
-          ) : (
-            filteredProducts.map((product) => (
-              <Card key={product.id} className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link href={`/app/products/${product.id}`} className="text-lg font-semibold text-rose-900 hover:underline">
-                    {product.name}
-                  </Link>
-                  <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-rose-700">
-                    {productStatusLabelMap[product.status]}
-                  </span>
-                </div>
-                <p className="text-sm text-rose-700/90">
-                  {product.brand} · {productCategoryLabelMap[product.category]}
-                </p>
-                <p className="text-xs text-rose-600">来源：{sourceTypeLabelMap[product.sourceType]}</p>
-                {product.note ? <p className="text-sm text-rose-700/80">{product.note}</p> : null}
-                <div className="pt-1">
-                  <Link href={`/app/products/${product.id}`}>
-                    <Button variant="secondary" className="h-9 w-full px-3 py-0 text-xs">
-                      查看详情
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))
-          )}
+          ) : null}
         </div>
       )}
+
+      <Link
+        href="/app/products/new"
+        aria-label="新增产品"
+        className="fixed bottom-24 right-6 z-20 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-3xl font-light leading-none text-white shadow-[0_8px_20px_rgba(60,53,48,0.2)]"
+      >
+        +
+      </Link>
+    </div>
+  );
+}
+
+function ProductsSection({
+  title,
+  items,
+  emptyText,
+}: {
+  title: string;
+  items: BeautyProduct[];
+  emptyText?: string;
+}) {
+  return (
+    <Card className="space-y-3 rounded-[24px]">
+      <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{title}</h3>
+      {items.length === 0 ? (
+        <FeedbackState>{emptyText || "暂无数据。"}</FeedbackState>
+      ) : (
+        <div className="grid gap-3">
+          {items.map((product) => (
+            <ProductListItem key={product.id} product={product} />
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ProductListItem({ product }: { product: BeautyProduct }) {
+  return (
+    <div className="rounded-[18px] border bg-[var(--surface)] p-4 shadow-[0_4px_16px_rgba(60,53,48,0.04)]" style={{ borderColor: "var(--border-soft)" }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link href={`/app/products/${product.id}`} className="text-base font-semibold text-[var(--foreground)] hover:underline">
+          {product.name}
+        </Link>
+        <span className="rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs font-medium text-[var(--accent-strong)]">
+          {productStatusLabelMap[product.status]}
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-[var(--text-muted)]">
+        {product.brand} · {productCategoryLabelMap[product.category]}
+      </p>
+      <p className="text-xs text-[var(--text-muted)]">来源：{sourceTypeLabelMap[product.sourceType]}</p>
+      <div className="pt-2">
+        <Link href={`/app/products/${product.id}`}>
+          <Button variant="secondary" className="h-9 w-full px-3 py-0 text-xs">
+            查看详情
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }

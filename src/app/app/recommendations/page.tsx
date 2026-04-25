@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { getStoredProducts, getSummaryMap } from "@/lib/products-store";
 import { getSavedProfile } from "@/lib/profile-store";
-import { buildMockRecommendations } from "@/lib/recommendations";
+import { buildForYouGuidance, GuidanceCard, UserGuidanceMode } from "@/lib/recommendations";
 import { productCategoryLabelMap } from "@/lib/products";
 import { getProfileDraft } from "@/lib/profile-draft";
 
@@ -14,27 +14,20 @@ export default function RecommendationsPage() {
   const profile = getSavedProfile() || getProfileDraft();
   const products = getStoredProducts();
   const summaries = getSummaryMap();
-  const recommendations = buildMockRecommendations(profile, products, summaries);
-  const grouped = {
-    fit: recommendations.filter((item) => item.category === "fit"),
-    beginner: recommendations.filter((item) => item.category === "beginner"),
-    budget: recommendations.filter((item) => item.category === "budget"),
-    caution: recommendations.filter((item) => item.category === "caution"),
-  };
 
   if (!profile) {
     return (
-      <Card className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-rose-950">推荐建议</h1>
+      <Card className="space-y-4 rounded-[24px]">
+        <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
         <FeedbackState>
-          请先保存个人档案，我们会基于你的肤质关注点和护肤经验生成建议。
+          先完成个人信息后，“为你”页面才能给出更贴合你的状态解读与下一步建议。
         </FeedbackState>
         <div className="grid gap-2">
           <Link href="/app/onboarding">
             <Button className="w-full">去完成开始设置</Button>
           </Link>
           <Link href="/app/profile">
-            <Button variant="secondary" className="w-full">直接填写档案</Button>
+            <Button variant="secondary" className="w-full">去个人页完善信息</Button>
           </Link>
         </div>
       </Card>
@@ -43,10 +36,10 @@ export default function RecommendationsPage() {
 
   if (products.length === 0) {
     return (
-      <Card className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-rose-950">推荐建议</h1>
+      <Card className="space-y-4 rounded-[24px]">
+        <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
         <FeedbackState>
-          你还没有产品数据。先添加 1-2 个正在使用或想购买的产品，建议会更贴合你的实际情况。
+          你还没有产品记录。“为你”页面会结合你的产品历史来做个性化判断，先添加 1-2 个产品吧。
         </FeedbackState>
         <Link href="/app/products/new">
           <Button className="w-full">添加第一个产品</Button>
@@ -55,93 +48,103 @@ export default function RecommendationsPage() {
     );
   }
 
+  const guidance = buildForYouGuidance(profile, products, summaries);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 pb-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-rose-950">推荐建议</h1>
-        <p className="text-sm text-rose-700/80">
-          基于你的档案、产品库状态和已生成摘要，提供可体验的前端建议结果（本地 mock）。
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">For You</p>
+        <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
+        <p className="text-sm text-[var(--text-muted)]">
+          {guidance.recommendation_intro}
         </p>
       </div>
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-rose-900">本次建议概览</h2>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-2xl bg-rose-50 p-3">
-            <p className="text-xs text-rose-600">匹配建议</p>
-            <p className="mt-1 text-xl font-semibold text-rose-900">{grouped.fit.length}</p>
-          </div>
-          <div className="rounded-2xl bg-rose-50 p-3">
-            <p className="text-xs text-rose-600">入门替代</p>
-            <p className="mt-1 text-xl font-semibold text-rose-900">{grouped.beginner.length}</p>
-          </div>
-          <div className="rounded-2xl bg-rose-50 p-3">
-            <p className="text-xs text-rose-600">预算优化</p>
-            <p className="mt-1 text-xl font-semibold text-rose-900">{grouped.budget.length}</p>
-          </div>
-          <div className="rounded-2xl bg-rose-50 p-3">
-            <p className="text-xs text-rose-600">风险提醒</p>
-            <p className="mt-1 text-xl font-semibold text-rose-900">{grouped.caution.length}</p>
-          </div>
+      <Card className="space-y-3 rounded-[24px]">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">你当前的状态</h2>
+        <p className="text-sm text-[var(--foreground)]">{guidance.user_state_summary}</p>
+        <p className="text-sm text-[var(--text-muted)]">{guidance.guidance_intro}</p>
+      </Card>
+
+      <Card className="space-y-3 rounded-[24px]">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">建议依据</h2>
+        <div className="grid gap-2 text-sm text-[var(--text-muted)]">
+          {guidance.recommendation_basis.map((line) => (
+            <p key={line}>· {line}</p>
+          ))}
         </div>
       </Card>
 
-      <RecommendationGroup
-        title="可能适合你的产品方向"
-        subtitle="结合你的档案与当前产品状态给出的匹配建议"
-        items={grouped.fit}
-      />
-      <RecommendationGroup
-        title="新手友好替代方案"
-        subtitle="更低门槛、可持续的起步路径"
-        items={grouped.beginner}
-      />
-      <RecommendationGroup
-        title="更省预算的可选路径"
-        subtitle="在不牺牲稳定性的前提下优化投入"
-        items={grouped.budget}
-      />
-      <RecommendationGroup
-        title="需要留意的风险点"
-        subtitle="帮助你提前规避常见误区"
-        items={grouped.caution}
-      />
+      <Card className="space-y-3 rounded-[24px]">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">当前更值得先关注的点</h2>
+        <div className="grid gap-2 text-sm">
+          {guidance.current_focus.map((focus) => (
+            <div key={focus} className="rounded-2xl bg-[var(--surface-soft)] p-3 text-[var(--foreground)]">
+              {focus}
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <GuidanceSection title="现在更适合你的方向" card={guidance.sections.direction} mode={guidance.mode} />
+      <GuidanceSection title="基于你已记录产品的建议" card={guidance.sections.product_based} mode={guidance.mode} />
+      <GuidanceSection title="当前需要注意的点" card={guidance.sections.caution} mode={guidance.mode} />
+      <GuidanceSection title="你下一步可以怎么做" card={guidance.sections.next_step} mode={guidance.mode} />
     </div>
   );
 }
 
-type RecommendationGroupProps = {
+type GuidanceSectionProps = {
   title: string;
-  subtitle: string;
-  items: ReturnType<typeof buildMockRecommendations>;
+  card: GuidanceCard;
+  mode: UserGuidanceMode;
 };
 
-function RecommendationGroup({ title, subtitle, items }: RecommendationGroupProps) {
-  if (!items.length) return null;
-
+function GuidanceSection({ title, card, mode }: GuidanceSectionProps) {
   return (
     <section className="space-y-2">
       <div>
-        <h2 className="text-lg font-semibold text-rose-900">{title}</h2>
-        <p className="text-sm leading-6 text-rose-700/80">{subtitle}</p>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{title}</h2>
+        <p className="text-sm leading-6 text-[var(--text-muted)]">{card.section_reason}</p>
       </div>
-      <div className="grid gap-3">
-        {items.map((item) => (
-          <Card key={`${item.category}-${item.title}`} className="space-y-3">
-            <h3 className="text-base font-semibold text-rose-900">{item.title}</h3>
-            {item.suggestedCategory ? (
-              <p className="text-xs uppercase tracking-wide text-rose-500">
-                推荐关注：{productCategoryLabelMap[item.suggestedCategory]}
-              </p>
-            ) : null}
-            <p className="text-sm leading-6 text-rose-800/90">{item.explanation}</p>
-            <div className="rounded-xl bg-rose-50 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-rose-500">为什么这条建议重要</p>
-              <p className="mt-1 text-sm text-rose-800">{item.whyItMatters}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <Card className="space-y-3 rounded-[24px]">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">{card.section_title}</h3>
+        {card.suggestedCategory ? (
+          <p className="text-xs uppercase tracking-[0.12em] text-[var(--accent)]">
+            关联品类：{productCategoryLabelMap[card.suggestedCategory]}
+          </p>
+        ) : null}
+        <p className="text-sm leading-6 text-[var(--foreground)]">{card.primary_direction}</p>
+        <div className="rounded-xl bg-[var(--surface-soft)] p-3">
+          <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--accent)]">为什么和你有关</p>
+          <p className="mt-1 text-sm text-[var(--foreground)]">{card.relevance_reason}</p>
+        </div>
+        {card.caution_note ? (
+          <div className="rounded-xl bg-[var(--surface)] p-3" style={{ border: "1px solid var(--border-soft)" }}>
+            <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--accent)]">现在需要注意</p>
+            <p className="mt-1 text-sm text-[var(--foreground)]">{card.caution_note}</p>
+          </div>
+        ) : null}
+        {card.key_terms?.length ? (
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)]">关键词</p>
+            <p className="text-sm text-[var(--foreground)]">{card.key_terms.join(" · ")}</p>
+          </div>
+        ) : null}
+        {mode === "beginner" && card.simple_explanation ? (
+          <div className="rounded-xl bg-[var(--surface-soft)] p-3">
+            <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--accent)]">简单解释</p>
+            <p className="mt-1 text-sm text-[var(--foreground)]">{card.simple_explanation}</p>
+          </div>
+        ) : null}
+        {card.why_it_matters_now ? (
+          <p className="text-sm text-[var(--text-muted)]">为什么现在重要：{card.why_it_matters_now}</p>
+        ) : null}
+        <div className="grid gap-2">
+          <p className="text-sm text-[var(--foreground)]">下一步：{card.next_best_step}</p>
+          <Button variant="secondary" className="w-full">{card.action_label}</Button>
+        </div>
+      </Card>
     </section>
   );
 }
