@@ -120,6 +120,12 @@ export default function ProductDetailPage() {
             </p>
           </div>
           <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">使用时长</p>
+            <p className="mt-1 font-medium text-[var(--foreground)]">
+              {(product.usageDurationMonths || 0) > 0 ? `${product.usageDurationMonths} 个月` : "未开始使用 / 仅记录"}
+            </p>
+          </div>
+          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">来源类型</p>
             <p className="mt-1 font-medium text-[var(--foreground)]">{sourceTypeLabelMap[product.sourceType]}</p>
           </div>

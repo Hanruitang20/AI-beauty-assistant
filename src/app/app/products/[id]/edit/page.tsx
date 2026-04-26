@@ -35,7 +35,7 @@ export default function EditProductPage() {
     categoryType: product.categoryType || "preset",
     customCategory: product.categoryType === "custom" ? product.category : "",
     sourceType: product.sourceType,
-    sourceLink: product.sourceLink || "",
+    usageDurationMonths: String(product.usageDurationMonths ?? 0),
     note: product.note || "",
     status: product.status,
   };
@@ -48,7 +48,7 @@ export default function EditProductPage() {
       category: normalizedCategory,
       categoryType: values.categoryType,
       sourceType: values.sourceType,
-      sourceLink: values.sourceLink || undefined,
+      usageDurationMonths: Number(values.usageDurationMonths),
       note: values.note || undefined,
       status: values.status,
     });

@@ -13,7 +13,7 @@ export type ProductFormValues = {
   categoryType: "preset" | "custom";
   customCategory: string;
   sourceType: SourceType | "";
-  sourceLink: string;
+  usageDurationMonths: string;
   note: string;
   status: ProductStatus | "";
 };
@@ -34,7 +34,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
     event.preventDefault();
     setError(null);
 
-    if (!form.productName || !form.brand || !form.category || !form.sourceType || !form.status) {
+    if (!form.productName || !form.brand || !form.category || !form.sourceType || !form.status || form.usageDurationMonths === "") {
       setError("请填写所有必填项。");
       return;
     }
@@ -135,6 +135,24 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
           <option value="friend">朋友推荐</option>
           <option value="creator">博主 / 社媒</option>
           <option value="dermatologist">皮肤科医生</option>
+        </Select>
+      </label>
+
+      <label className="block space-y-1.5">
+        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">使用时长 *</span>
+        <Select
+          className="pr-11"
+          value={form.usageDurationMonths}
+          onChange={(event) => setForm((prev) => ({ ...prev, usageDurationMonths: event.target.value }))}
+        >
+          <option value="">请选择使用时长</option>
+          <option value="0">未开始使用 / 仅记录</option>
+          <option value="1">1 个月内</option>
+          <option value="2">约 2 个月</option>
+          <option value="3">约 3 个月</option>
+          <option value="4">约 4 个月</option>
+          <option value="6">约半年</option>
+          <option value="12">约一年或更久</option>
         </Select>
       </label>
 

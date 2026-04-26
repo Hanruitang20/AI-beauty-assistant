@@ -11,6 +11,7 @@ export type BeautyProduct = {
   category: string;
   categoryType?: "preset" | "custom";
   status: ProductStatus;
+  usageDurationMonths?: number;
   sourceType: SourceType;
   sourceLink?: string;
   note?: string;
@@ -49,6 +50,7 @@ export const mockProducts: BeautyProduct[] = [
     brand: "Round Lab",
     category: "moisturizer",
     status: "using",
+    usageDurationMonths: 3,
     sourceType: "self-discovery",
     note: "妆前使用也很服帖。",
   },
@@ -58,6 +60,7 @@ export const mockProducts: BeautyProduct[] = [
     brand: "Anua",
     category: "serum",
     status: "recommended",
+    usageDurationMonths: 0,
     sourceType: "creator",
   },
   {
@@ -66,6 +69,7 @@ export const mockProducts: BeautyProduct[] = [
     brand: "Beauty of Joseon",
     category: "sunscreen",
     status: "wishlist",
+    usageDurationMonths: 0,
     sourceType: "friend",
   },
 ];

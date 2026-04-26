@@ -13,7 +13,7 @@ const initialForm: ProductFormValues = {
   categoryType: "preset",
   customCategory: "",
   sourceType: "",
-  sourceLink: "",
+  usageDurationMonths: "",
   note: "",
   status: "",
 };
@@ -30,7 +30,7 @@ export default function NewProductPage() {
       category: normalizedCategory,
       categoryType: form.categoryType,
       sourceType: form.sourceType,
-      sourceLink: form.sourceLink || undefined,
+      usageDurationMonths: Number(form.usageDurationMonths),
       note: form.note || undefined,
       status: form.status,
     });
