@@ -1,150 +1,355 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
-import { getStoredProducts, getSummaryMap } from "@/lib/products-store";
+import { getStoredProducts } from "@/lib/products-store";
 import { getSavedProfile } from "@/lib/profile-store";
-import { buildForYouGuidance, GuidanceCard, UserGuidanceMode } from "@/lib/recommendations";
-import { productCategoryLabelMap } from "@/lib/products";
 import { getProfileDraft } from "@/lib/profile-draft";
+import { deriveUserAppState } from "@/lib/user-state";
+import { BeautyProduct, getCategoryLabel } from "@/lib/products";
+import { getTopLevelCategoryLabel } from "@/lib/product-taxonomy";
+import { getPrimaryCategory, PRODUCT_PRIMARY_CATEGORIES, ProductPrimaryCategory } from "@/lib/product-categories";
 
 export default function RecommendationsPage() {
-  const profile = getSavedProfile() || getProfileDraft();
+  const savedProfile = getSavedProfile();
+  const profileDraft = getProfileDraft() || null;
   const products = getStoredProducts();
-  const summaries = getSummaryMap();
+  const [analysisCategory, setAnalysisCategory] = useState<ProductPrimaryCategory>("all");
+  const userState = deriveUserAppState({
+    isSignedIn: true,
+    products,
+    profile: savedProfile,
+    assessmentDraft: profileDraft,
+  });
 
-  if (!profile) {
+  const profileSummary = [
+    savedProfile?.skinType ? `肤质：${savedProfile.skinType}` : null,
+    savedProfile?.mainConcerns ? `主要诉求：${savedProfile.mainConcerns}` : null,
+    savedProfile?.sensitivityLevel ? `敏感程度：${savedProfile.sensitivityLevel}` : null,
+    savedProfile?.experienceLevel ? `经验水平：${savedProfile.experienceLevel}` : null,
+  ].filter(Boolean) as string[];
+
+  const statusCount = products.reduce<Record<string, number>>((acc, item) => {
+    acc[item.status] = (acc[item.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const categoryCount = products.reduce<Record<string, number>>((acc, item) => {
+    const topLevel = getPrimaryCategory(item.category);
+    acc[topLevel] = (acc[topLevel] || 0) + 1;
+    return acc;
+  }, {});
+
+  const topCategory = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+
+  const scopedProducts =
+    analysisCategory === "all"
+      ? products
+      : products.filter((item) => getPrimaryCategory(item.category) === analysisCategory);
+
+  const scopedInsights = buildProductInsights({
+    products: scopedProducts,
+    hasProfile: userState.hasProfile,
+    profileSkinType: savedProfile?.skinType || "",
+    selectedCategory: analysisCategory,
+  });
+
+  if (!userState.hasProfile && userState.productCount === 0) {
     return (
       <Card className="space-y-4 rounded-[24px]">
         <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
         <FeedbackState>
-          先完成个人信息后，“为你”页面才能给出更贴合你的状态解读与下一步建议。
+          还需要了解你的个人情况和产品记录，才能帮你分析产品和使用方向。
         </FeedbackState>
         <div className="grid gap-2">
-          <Link href="/app/onboarding">
-            <Button className="w-full">去完成开始设置</Button>
+          <Link href="/app/assessment?returnTo=%2Fapp%2Frecommendations">
+            <Button className="w-full">完善个人信息</Button>
           </Link>
-          <Link href="/app/profile">
-            <Button variant="secondary" className="w-full">去个人页完善信息</Button>
+          <Link href="/app/products/new">
+            <Button variant="secondary" className="w-full">添加第一个产品</Button>
           </Link>
         </div>
       </Card>
     );
   }
 
-  if (products.length === 0) {
+  if (userState.hasProfile && userState.productCount === 0) {
     return (
-      <Card className="space-y-4 rounded-[24px]">
-        <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
-        <FeedbackState>
-          你还没有产品记录。“为你”页面会结合你的产品历史来做个性化判断，先添加 1-2 个产品吧。
-        </FeedbackState>
-        <Link href="/app/products/new">
-          <Button className="w-full">添加第一个产品</Button>
-        </Link>
-      </Card>
+      <div className="space-y-4">
+        <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
+        <Card className="space-y-3 rounded-[24px]">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">个人画像</h2>
+          <div className="grid gap-2 text-sm text-[var(--foreground)]">
+            {(profileSummary.length ? profileSummary : ["已完成个人画像，可继续补充更细致的信息。"]).map((line) => (
+              <p key={line}>· {line}</p>
+            ))}
+          </div>
+        </Card>
+        <Card className="space-y-3 rounded-[24px]">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">下一步行动</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            你已完成个人画像。接下来添加正在使用、想买或被推荐的产品后，我就能进一步分析产品之间的搭配、重复和使用注意点。
+          </p>
+          <Link href="/app/products/new">
+            <Button className="w-full">添加第一个产品</Button>
+          </Link>
+        </Card>
+      </div>
     );
   }
 
-  const guidance = buildForYouGuidance(profile, products, summaries);
+  if (!userState.hasProfile && userState.productCount > 0) {
+    return (
+      <div className="space-y-4">
+        <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
+        <Card className="space-y-3 rounded-[24px]">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">产品记录概览</h2>
+          <p className="text-sm text-[var(--text-muted)]">已记录 {products.length} 个产品。</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            状态分布：正在使用 {statusCount.using || 0} · 想购买 {statusCount.wishlist || 0} · 被推荐 {statusCount.recommended || 0} · 用过 {statusCount.used || 0}
+          </p>
+        </Card>
+        <Card className="space-y-3 rounded-[24px]">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
+          <p className="text-sm text-[var(--foreground)]">
+            目前只能基于你记录的产品做初步整理。完善个人信息后，我才能结合你的肤质、敏感程度和主要诉求，给出更适合你的建议。
+          </p>
+          <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
+          <ScopedAnalysisBody products={scopedProducts} insights={scopedInsights} />
+        </Card>
+        <Card className="space-y-3 rounded-[24px]">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">下一步行动</h2>
+          <p className="text-sm text-[var(--text-muted)]">先补充个人画像，再结合产品记录获得更准确的分析。</p>
+          <Link href="/app/assessment?returnTo=%2Fapp%2Frecommendations">
+            <Button className="w-full">完善个人信息</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">For You</p>
-        <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
-        <p className="text-sm text-[var(--text-muted)]">
-          {guidance.recommendation_intro}
-        </p>
-      </div>
+      <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
 
       <Card className="space-y-3 rounded-[24px]">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">你当前的状态</h2>
-        <p className="text-sm text-[var(--foreground)]">{guidance.user_state_summary}</p>
-        <p className="text-sm text-[var(--text-muted)]">{guidance.guidance_intro}</p>
-      </Card>
-
-      <Card className="space-y-3 rounded-[24px]">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">建议依据</h2>
-        <div className="grid gap-2 text-sm text-[var(--text-muted)]">
-          {guidance.recommendation_basis.map((line) => (
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">个人画像</h2>
+        <div className="grid gap-2 text-sm text-[var(--foreground)]">
+          {(profileSummary.length ? profileSummary : ["你已完成基础画像，可继续补充更细字段。"]).map((line) => (
             <p key={line}>· {line}</p>
           ))}
         </div>
       </Card>
 
       <Card className="space-y-3 rounded-[24px]">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">当前更值得先关注的点</h2>
-        <div className="grid gap-2 text-sm">
-          {guidance.current_focus.map((focus) => (
-            <div key={focus} className="rounded-2xl bg-[var(--surface-soft)] p-3 text-[var(--foreground)]">
-              {focus}
-            </div>
-          ))}
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">产品记录概览</h2>
+        <div className="grid gap-2 text-sm text-[var(--text-muted)]">
+          <p>已记录 {products.length} 个产品。</p>
+          <p>当前主要集中在：{topCategory ? getTopLevelCategoryLabel(topCategory as ProductPrimaryCategory) : "未分类"}。</p>
+          <p>状态分布：正在使用 {statusCount.using || 0} · 想购买 {statusCount.wishlist || 0} · 被推荐 {statusCount.recommended || 0} · 用过 {statusCount.used || 0}</p>
         </div>
       </Card>
 
-      <GuidanceSection title="现在更适合你的方向" card={guidance.sections.direction} mode={guidance.mode} />
-      <GuidanceSection title="基于你已记录产品的建议" card={guidance.sections.product_based} mode={guidance.mode} />
-      <GuidanceSection title="当前需要注意的点" card={guidance.sections.caution} mode={guidance.mode} />
-      <GuidanceSection title="你下一步可以怎么做" card={guidance.sections.next_step} mode={guidance.mode} />
+      <Card className="space-y-3 rounded-[24px]">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
+        <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
+        <ScopedAnalysisBody products={scopedProducts} insights={scopedInsights} />
+      </Card>
+
+      <Card className="space-y-3 rounded-[24px]">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">下一步行动</h2>
+        {userState.hasOneProduct ? (
+          <div className="grid gap-2">
+            <p className="text-sm text-[var(--text-muted)]">先理解这一个产品在你流程中的作用，再继续补充更多记录，让后续分析更完整。</p>
+            <Link href={`/app/products/${products[0]?.id}`}>
+              <Button variant="secondary" className="w-full">查看这个产品详情</Button>
+            </Link>
+            <Link href="/app/products/new">
+              <Button className="w-full">继续添加产品</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <p className="text-sm text-[var(--text-muted)]">继续补充使用体验（如刺激感、是否回购、搭配关系）后，分析会更贴近你的实际使用场景。</p>
+            <Link href="/app/products">
+              <Button className="w-full">回到产品库</Button>
+            </Link>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
 
-type GuidanceSectionProps = {
+type Insight = {
   title: string;
-  card: GuidanceCard;
-  mode: UserGuidanceMode;
+  reason: string;
+  nextStep: string;
 };
 
-function GuidanceSection({ title, card, mode }: GuidanceSectionProps) {
+function CategoryChips({
+  selected,
+  onChange,
+}: {
+  selected: ProductPrimaryCategory;
+  onChange: (next: ProductPrimaryCategory) => void;
+}) {
   return (
-    <section className="space-y-2">
-      <div>
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{title}</h2>
-        <p className="text-sm leading-6 text-[var(--text-muted)]">{card.section_reason}</p>
+    <div className="-mx-1 overflow-x-auto pb-1">
+      <div className="flex min-w-max gap-2 px-1">
+        {PRODUCT_PRIMARY_CATEGORIES.map((category) => {
+          const active = selected === category.id;
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onChange(category.id)}
+              className={[
+                "h-8 flex-shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+                active
+                  ? "bg-[var(--accent)] text-white"
+                  : "bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-soft)]",
+              ].join(" ")}
+              style={{ borderColor: active ? "var(--accent)" : "var(--border-soft)" }}
+            >
+              {category.label}
+            </button>
+          );
+        })}
       </div>
-      <Card className="space-y-3 rounded-[24px]">
-        <h3 className="text-lg font-semibold text-[var(--foreground)]">{card.section_title}</h3>
-        {card.suggestedCategory ? (
-          <p className="text-xs uppercase tracking-[0.12em] text-[var(--accent)]">
-            关联品类：{productCategoryLabelMap[card.suggestedCategory]}
-          </p>
-        ) : null}
-        <p className="text-sm leading-6 text-[var(--foreground)]">{card.primary_direction}</p>
-        <div className="rounded-xl bg-[var(--surface-soft)] p-3">
-          <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--accent)]">为什么和你有关</p>
-          <p className="mt-1 text-sm text-[var(--foreground)]">{card.relevance_reason}</p>
-        </div>
-        {card.caution_note ? (
-          <div className="rounded-xl bg-[var(--surface)] p-3" style={{ border: "1px solid var(--border-soft)" }}>
-            <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--accent)]">现在需要注意</p>
-            <p className="mt-1 text-sm text-[var(--foreground)]">{card.caution_note}</p>
-          </div>
-        ) : null}
-        {card.key_terms?.length ? (
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--text-muted)]">关键词</p>
-            <p className="text-sm text-[var(--foreground)]">{card.key_terms.join(" · ")}</p>
-          </div>
-        ) : null}
-        {mode === "beginner" && card.simple_explanation ? (
-          <div className="rounded-xl bg-[var(--surface-soft)] p-3">
-            <p className="text-xs font-medium uppercase tracking-[0.1em] text-[var(--accent)]">简单解释</p>
-            <p className="mt-1 text-sm text-[var(--foreground)]">{card.simple_explanation}</p>
-          </div>
-        ) : null}
-        {card.why_it_matters_now ? (
-          <p className="text-sm text-[var(--text-muted)]">为什么现在重要：{card.why_it_matters_now}</p>
-        ) : null}
-        <div className="grid gap-2">
-          <p className="text-sm text-[var(--foreground)]">下一步：{card.next_best_step}</p>
-          <Button variant="secondary" className="w-full">{card.action_label}</Button>
-        </div>
-      </Card>
-    </section>
+    </div>
   );
+}
+
+function ScopedAnalysisBody({ products, insights }: { products: BeautyProduct[]; insights: Insight[] }) {
+  if (products.length === 0) {
+    return (
+      <div className="space-y-3">
+        <FeedbackState>这里还没有相关产品记录。添加这一类产品后，我可以帮你整理对应的产品分析。</FeedbackState>
+        <div className="grid gap-2">
+          <Link href="/app/products/new">
+            <Button className="w-full">添加产品</Button>
+          </Link>
+          <Link href="/app/products/all">
+            <Button variant="secondary" className="w-full">查看全部产品</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (products.length === 1) {
+    const only = products[0];
+    return (
+      <div className="space-y-3">
+        <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
+          <p className="text-sm font-semibold text-[var(--foreground)]">单品基础分析</p>
+          <p className="mt-1 text-sm text-[var(--foreground)]">
+            当前分类下只有 1 个产品：{only.name}。先理解这款产品的作用，再补充同类或相关产品，才能做组合分析。
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：进入详情页查看或生成该产品摘要。</p>
+        </div>
+        <Link href={`/app/products/${only.id}`} className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]">
+          查看 {only.name} &gt;
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <InsightsList insights={insights} />
+      <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
+        <p className="text-xs font-medium text-[var(--text-muted)]">相关产品</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {products.slice(0, 4).map((product) => (
+            <Link
+              key={product.id}
+              href={`/app/products/${product.id}`}
+              className="rounded-full border px-3 py-1 text-xs text-[var(--foreground)] hover:bg-[var(--surface)]"
+              style={{ borderColor: "var(--border-soft)" }}
+            >
+              {product.name}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InsightsList({ insights }: { insights: Insight[] }) {
+  return (
+    <div className="grid gap-2">
+      {insights.map((item) => (
+        <div key={item.title} className="rounded-2xl bg-[var(--surface-soft)] p-3">
+          <p className="text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+          <p className="mt-1 text-sm text-[var(--foreground)]">{item.reason}</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：{item.nextStep}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function buildProductInsights({
+  products,
+  hasProfile,
+  profileSkinType,
+  selectedCategory,
+}: {
+  products: Array<{ category: string; status: string }>;
+  hasProfile: boolean;
+  profileSkinType: string;
+  selectedCategory: ProductPrimaryCategory;
+}): Insight[] {
+  const categoryCount = products.reduce<Record<string, number>>((acc, item) => {
+    acc[item.category] = (acc[item.category] || 0) + 1;
+    return acc;
+  }, {});
+  const entries = Object.entries(categoryCount).sort((a, b) => b[1] - a[1]);
+  const top = entries[0];
+
+  const hasSunscreen = products.some((item) => item.category.includes("sunscreen") || item.category.includes("防晒"));
+  const hasLip = products.some((item) => {
+    const category = item.category.toLowerCase();
+    return category.includes("唇") || category.includes("lip");
+  });
+  const hasBodyOrHair = products.some((item) => {
+    const category = item.category.toLowerCase();
+    return category.includes("body") || category.includes("hair") || category.includes("身体") || category.includes("头发");
+  });
+  const categoryLabel = selectedCategory === "all" ? "全部产品" : getTopLevelCategoryLabel(selectedCategory);
+
+  const insights: Insight[] = [];
+  if (top) {
+    insights.push({
+      title: "方向识别",
+      reason: `${categoryLabel}下当前最多的是「${getCategoryLabel(top[0])}」（${top[1]} 个），可先从这一组记录梳理重点。`,
+      nextStep: "先在同方向产品里对比使用状态，避免重复尝试。",
+    });
+  }
+  insights.push({
+    title: "搭配关系提示",
+    reason:
+      selectedCategory === "makeup" && hasLip
+        ? "美妆记录里包含唇部相关产品，建议补充妆效、持久度、是否拔干和叠涂体验。"
+        : selectedCategory === "body-hair" && hasBodyOrHair
+          ? "身体&头发类产品建议关注使用频率、肤感/发感、香味接受度和是否油腻。"
+          : hasSunscreen
+            ? "记录里有防晒相关产品，建议结合底妆或日间步骤观察叠加后的肤感与稳定性。"
+            : "可先按当前记录梳理常见使用顺序，减少一次上太多新品带来的干扰。",
+    nextStep: "先固定基础步骤，再一次只新增一个变量观察 5-7 天。",
+  });
+  insights.push({
+    title: "信息缺口",
+    reason: hasProfile
+      ? `已有画像${profileSkinType ? `（${profileSkinType}）` : ""}，但仍缺少使用频率、刺激感和回购意愿等记录，当前分析仍是规则化判断。`
+      : "当前缺少个人画像与使用体验记录，因此只能做基础整理，不能做强个性化判断。",
+    nextStep: "后续在产品详情中补充使用记录（频率/体验/是否回购），分析会更具体。",
+  });
+  return insights.slice(0, 3);
 }

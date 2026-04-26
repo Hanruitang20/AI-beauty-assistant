@@ -16,7 +16,8 @@ export default function InternalAppLayout({ children }: { children: ReactNode })
       router.replace("/auth/sign-in");
       return;
     }
-    setReady(true);
+    const readyTimer = window.setTimeout(() => setReady(true), 0);
+    return () => window.clearTimeout(readyTimer);
   }, [router, pathname]);
 
   if (!ready) return null;

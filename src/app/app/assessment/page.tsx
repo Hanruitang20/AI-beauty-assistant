@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { saveProfileDraft } from "@/lib/profile-draft";
+import { queueToast } from "@/lib/flash-toast";
 
 type Question = {
   id: string;
@@ -50,6 +51,7 @@ type Answers = Record<string, string>;
 
 export default function AssessmentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [answers, setAnswers] = useState<Answers>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -128,7 +130,9 @@ export default function AssessmentPage() {
       ingredientsToAvoid,
     });
 
-    router.push("/app/profile/edit?source=assessment");
+    queueToast({ tone: "success", message: "测评结果已应用到个人画像草稿。" });
+    const returnTo = searchParams.get("returnTo") || "/app/products";
+    router.push(`/app/profile/edit?source=assessment&returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   return (

@@ -19,12 +19,10 @@ export default function SignUpPage() {
   const [form, setForm] = useState<SignUpState>({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSuccess(false);
 
     if (!form.name || !form.email || !form.password) {
       setError("请填写所有必填项。");
@@ -44,14 +42,12 @@ export default function SignUpPage() {
       id: `bs_user_${Date.now().toString().slice(-6)}`,
     });
     setLoading(false);
-    setSuccess(true);
     router.replace("/app/onboarding");
   }
 
   return (
     <Card className="space-y-6 rounded-[24px]">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">开始使用</p>
         <h1 className="editorial-heading text-3xl font-semibold tracking-tight text-[var(--foreground)]">创建账号</h1>
         <p className="text-sm text-[var(--text-muted)]">
           不到 1 分钟，开启你的专属美妆产品库。
@@ -96,12 +92,6 @@ export default function SignUpPage() {
         {error ? (
           <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
             {error}
-          </p>
-        ) : null}
-
-        {success ? (
-          <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            账号创建成功，下一步去完善你的档案。
           </p>
         ) : null}
 

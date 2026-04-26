@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { consumeQueuedToast } from "@/lib/flash-toast";
 
 type ToastTone = "success" | "error" | "info";
 
@@ -41,8 +42,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, next]);
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((item) => item.id !== next.id));
-    }, 2400);
+    }, 2800);
   }, []);
+
+  useEffect(() => {
+    const queued = consumeQueuedToast();
+    if (queued) {
+      const timer = window.setTimeout(() => showToast(queued), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [showToast]);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
 

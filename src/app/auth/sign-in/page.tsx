@@ -50,7 +50,6 @@ export default function SignInPage() {
   return (
     <Card className="space-y-6 rounded-[24px]">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">欢迎回来</p>
         <h1 className="editorial-heading text-3xl font-semibold tracking-tight text-[var(--foreground)]">登录</h1>
         <p className="text-sm text-[var(--text-muted)]">
           继续管理你的产品库与护肤档案。

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,6 @@ import { useToast } from "@/components/ui/toast-provider";
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const productId = params.id;
   const product = useMemo<BeautyProduct | null>(() => getProductById(productId), [productId]);
@@ -35,14 +34,6 @@ export default function ProductDetailPage() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [summaryStatusText, setSummaryStatusText] = useState<string | null>(null);
-  const updatedToastShownRef = useRef(false);
-
-  useEffect(() => {
-    if (searchParams.get("updated") === "1" && !updatedToastShownRef.current) {
-      showToast({ tone: "success", message: "产品修改已保存。" });
-      updatedToastShownRef.current = true;
-    }
-  }, [searchParams, showToast]);
 
   useEffect(() => {
     if (product) {
@@ -66,7 +57,7 @@ export default function ProductDetailPage() {
     if (!product) return;
     deleteProductById(product.id);
     showToast({ tone: "success", message: "该产品已从产品库删除。" });
-    router.push("/app/products?deleted=1");
+    router.push("/app/products");
   }
 
   if (!product) {
@@ -154,6 +145,9 @@ export default function ProductDetailPage() {
 
       <ProductSummaryPanel summary={summary} loading={loadingSummary} onGenerate={handleGenerateSummary} />
       {summaryStatusText ? <FeedbackState tone={loadingSummary ? "info" : "success"}>{summaryStatusText}</FeedbackState> : null}
+      <Card className="rounded-[24px] bg-[var(--surface-soft)] text-sm text-[var(--text-muted)]">
+        后续这里会补充“我的使用记录”，例如使用频率、体验变化和是否回购。当前版本先保持快速记录与基础分析。
+      </Card>
 
       <Card className="space-y-3 rounded-[24px]" style={{ background: "color-mix(in oklab, var(--danger-soft) 26%, white)" }}>
         <h2 className="text-lg font-semibold text-[var(--danger-text)]">危险操作</h2>

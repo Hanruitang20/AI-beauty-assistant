@@ -18,6 +18,7 @@ type AppShellProps = {
 };
 
 const headerTitleMap: Array<{ pattern: RegExp; title: string }> = [
+  { pattern: /^\/app\/notifications$/, title: "通知中心" },
   { pattern: /^\/app\/products\/all$/, title: "全部产品" },
   { pattern: /^\/app\/products\/categories$/, title: "分类浏览" },
   { pattern: /^\/app\/products\/recent$/, title: "最近查看" },
@@ -35,6 +36,7 @@ const headerTitleMap: Array<{ pattern: RegExp; title: string }> = [
 ];
 
 const backEnabledPatterns = [
+  /^\/app\/notifications$/,
   /^\/app\/products\/all$/,
   /^\/app\/products\/categories$/,
   /^\/app\/products\/recent$/,
@@ -52,6 +54,7 @@ export function AppShell({ children }: AppShellProps) {
   const showBack = backEnabledPatterns.some((pattern) => pattern.test(pathname));
 
   function getBackFallbackPath() {
+    if (/^\/app\/notifications$/.test(pathname)) return "/app/products";
     if (/^\/app\/products\/(all|categories|recent|summaries)$/.test(pathname)) return "/app/products";
     if (/^\/app\/profile\/edit$/.test(pathname)) return "/app/profile";
     if (/^\/app\/products\/new$/.test(pathname)) return "/app/products";
@@ -78,16 +81,18 @@ export function AppShell({ children }: AppShellProps) {
                 返回
               </Button>
             ) : (
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]">
-                ⌕
-              </span>
+              <span className="inline-flex h-9 w-9" aria-hidden />
             )}
             <Link href="/" className="editorial-heading text-lg font-semibold italic tracking-tight text-[#3c3530]">
               BeautyShelf AI
             </Link>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]">
+            <Link
+              href="/app/notifications"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]"
+              aria-label="通知中心"
+            >
               🔔
-            </span>
+            </Link>
           </div>
           <div className="px-4 pb-3">
             <h1 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{headerTitle}</h1>

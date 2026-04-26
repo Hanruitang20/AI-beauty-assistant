@@ -1,11 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
-import { TagInput } from "@/components/forms/tag-input";
 import { clearProfileDraft, getProfileDraft } from "@/lib/profile-draft";
 import { getSavedProfile, saveProfile, SavedProfile } from "@/lib/profile-store";
 import { FeedbackState } from "@/components/ui/feedback-state";
@@ -28,6 +27,7 @@ const initialForm: ProfileFormState = {
 };
 
 export function ProfileForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const savedProfile = getSavedProfile();
@@ -49,27 +49,32 @@ export function ProfileForm() {
   const [form, setForm] = useState<ProfileFormState>(initialFormState);
   const [prefilledFromAssessment, setPrefilledFromAssessment] = useState(Boolean(draft));
   const [loadedFromSavedProfile, setLoadedFromSavedProfile] = useState(Boolean(savedProfile && !draft));
-  const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  function resolveReturnToPath() {
+    const fallbackPath = "/app/products";
+    const raw = searchParams.get("returnTo");
+    if (!raw || !raw.startsWith("/")) return fallbackPath;
+    if (raw === "/app/onboarding") return fallbackPath;
+    return raw;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaved(false);
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 800));
     saveProfile(form);
     setSaving(false);
-    setSaved(true);
     clearProfileDraft();
     setPrefilledFromAssessment(false);
     setLoadedFromSavedProfile(true);
     showToast({ tone: "success", message: "个人画像已保存到本地。" });
+    router.push(resolveReturnToPath());
   }
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Beauty profile</p>
         <h1 className="editorial-heading text-[30px] font-semibold tracking-tight text-[#3c3530]">个人画像</h1>
         <p className="text-sm text-[var(--text-muted)]">这些信息会影响你的产品理解、建议优先级和推荐方向。</p>
       </div>
@@ -186,21 +191,6 @@ export function ProfileForm() {
               onChange={(e) => setForm((p) => ({ ...p, ingredientsToAvoid: e.target.value }))}
             />
           </label>
-
-          <TagInput
-            label="偏好品牌（可选）"
-            values={form.preferredBrands}
-            onChange={(next) => setForm((p) => ({ ...p, preferredBrands: next }))}
-            placeholder="输入品牌后按回车"
-          />
-          <TagInput
-            label="已踩雷品牌/产品（可选）"
-            values={form.dislikedBrands}
-            onChange={(next) => setForm((p) => ({ ...p, dislikedBrands: next }))}
-            placeholder="输入品牌或产品后按回车"
-          />
-
-          {saved ? <FeedbackState tone="success">个人画像已保存，本地建议将基于这些信息更新。</FeedbackState> : null}
 
           <div className="sticky bottom-24 z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
             <Button className="w-full" type="submit" disabled={saving}>

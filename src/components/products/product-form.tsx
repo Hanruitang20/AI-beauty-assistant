@@ -29,12 +29,10 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
   const [form, setForm] = useState<ProductFormValues>(initialValues);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSaved(false);
 
     if (!form.productName || !form.brand || !form.category || !form.sourceType || !form.status) {
       setError("请填写所有必填项。");
@@ -46,16 +44,10 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       return;
     }
 
-    if (form.sourceLink && !form.sourceLink.startsWith("http")) {
-      setError("来源链接需以 http 或 https 开头。");
-      return;
-    }
-
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 700));
     await onSubmit(form);
     setSaving(false);
-    setSaved(true);
 
     if (mode === "create") {
       setForm(initialValues);
@@ -85,6 +77,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       <label className="block space-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">品类 *</span>
         <Select
+          className="pr-11"
           value={form.category}
           onChange={(event) => {
             const value = event.target.value;
@@ -118,6 +111,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       <label className="block space-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">状态 *</span>
         <Select
+          className="pr-11"
           value={form.status}
           onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as ProductStatus }))}
         >
@@ -132,6 +126,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       <label className="block space-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">来源类型 *</span>
         <Select
+          className="pr-11"
           value={form.sourceType}
           onChange={(event) => setForm((prev) => ({ ...prev, sourceType: event.target.value as SourceType }))}
         >
@@ -141,15 +136,6 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
           <option value="creator">博主 / 社媒</option>
           <option value="dermatologist">皮肤科医生</option>
         </Select>
-      </label>
-
-      <label className="block space-y-1.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">来源链接（可选）</span>
-        <Input
-          value={form.sourceLink}
-          placeholder="https://..."
-          onChange={(event) => setForm((prev) => ({ ...prev, sourceLink: event.target.value }))}
-        />
       </label>
 
       <label className="block space-y-1.5">
@@ -163,11 +149,6 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
       </label>
 
       {error ? <FeedbackState tone="error">{error}</FeedbackState> : null}
-      {saved ? (
-        <FeedbackState tone="success">
-          {mode === "create" ? "产品已保存。" : "产品信息已更新。"}
-        </FeedbackState>
-      ) : null}
 
       <div className="sticky bottom-20 z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
         <Button className="w-full" type="submit" disabled={saving}>

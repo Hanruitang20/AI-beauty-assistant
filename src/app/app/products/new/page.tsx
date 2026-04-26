@@ -35,14 +35,13 @@ export default function NewProductPage() {
       status: form.status,
     });
     showToast({ tone: "success", message: `已添加「${created.name}」` });
-    router.push(`/app/products?created=${encodeURIComponent(created.name)}&createdAt=${Date.now()}`);
+    router.push("/app/products");
   }
 
   return (
     <div className="space-y-6 pb-6">
       <div className="space-y-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Add to shelf</p>
           <h1 className="editorial-heading text-[30px] font-semibold tracking-tight text-[#3c3530]">新增产品</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">记录一次，后续选择就更轻松。</p>
         </div>

@@ -4,18 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getProfileDraft } from "@/lib/profile-draft";
 import { getSavedProfile } from "@/lib/profile-store";
-import { FeedbackState } from "@/components/ui/feedback-state";
-import { getStoredProducts } from "@/lib/products-store";
 import { getMockUser, signOutMock } from "@/lib/mock-auth";
+import { queueToast } from "@/lib/flash-toast";
 
 export default function ProfilePage() {
   const router = useRouter();
   const user = getMockUser();
   const savedProfile = getSavedProfile();
-  const draft = getProfileDraft();
-  const products = getStoredProducts();
   const profileMainConcerns = savedProfile?.mainConcerns || "未填写";
   const profileSkinType = savedProfile?.skinType || "未填写";
   const profileSensitivity = savedProfile?.sensitivityLevel || "未填写";
@@ -44,12 +40,12 @@ export default function ProfilePage() {
       <section className="space-y-3">
         <div className="flex items-end justify-between">
           <h2 className="text-lg font-semibold text-[var(--foreground)]">个人档案</h2>
-          <Link href="/app/profile/edit" className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
+          <Link href="/app/profile/edit?returnTo=%2Fapp%2Fprofile" className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
             编辑
           </Link>
         </div>
 
-        <Link href="/app/profile/edit" className="block">
+        <Link href="/app/profile/edit?returnTo=%2Fapp%2Fprofile" className="block">
           <div className="grid grid-cols-2 gap-3">
             <Card className="rounded-[24px]">
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">肤质</p>
@@ -92,6 +88,7 @@ export default function ProfilePage() {
         className="w-full"
         onClick={() => {
           signOutMock();
+          queueToast({ tone: "success", message: "你已退出登录。" });
           router.replace("/auth/sign-in");
         }}
       >

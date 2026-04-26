@@ -53,7 +53,7 @@ export default function EditProductPage() {
       status: values.status,
     });
     showToast({ tone: "success", message: "产品信息已更新。" });
-    router.push(`/app/products/${params.id}?updated=1`);
+    router.push(`/app/products/${params.id}`);
   }
 
   return (
