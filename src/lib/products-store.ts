@@ -1,4 +1,4 @@
-import { BeautyProduct, mockProducts, productCategoryLabelMap, productStatusLabelMap } from "@/lib/products";
+import { BeautyProduct, getCategoryLabel, productStatusLabelMap } from "@/lib/products";
 
 const PRODUCTS_KEY = "beautyshelf.products";
 const SUMMARY_KEY = "beautyshelf.product-summaries";
@@ -28,19 +28,19 @@ function hasWindow() {
 }
 
 export function getStoredProducts(): BeautyProduct[] {
-  if (!hasWindow()) return mockProducts;
+  if (!hasWindow()) return [];
 
   const raw = window.localStorage.getItem(PRODUCTS_KEY);
   if (!raw) {
-    window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify(mockProducts));
-    return mockProducts;
+    window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify([]));
+    return [];
   }
 
   try {
     const parsed = JSON.parse(raw) as BeautyProduct[];
-    return parsed.length ? parsed : mockProducts;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return mockProducts;
+    return [];
   }
 }
 
@@ -134,7 +134,7 @@ export function saveSummaryByProductId(id: string, summary: ProductSummary) {
 }
 
 export function generateMockSummary(product: BeautyProduct): ProductSummary {
-  const categoryDefaults: Record<BeautyProduct["category"], Partial<ProductSummary>> = {
+  const categoryDefaults: Partial<Record<string, Partial<ProductSummary>>> = {
     cleanser: {
       whenToUse: "早晚都可使用，卸妆后进行清洁。",
       routineStep: "清洁第一步",
@@ -176,7 +176,7 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
     dermatologist: "来自医生建议，优先按温和、稳定、可持续的节奏建立使用习惯。",
   };
 
-  const inSimplerTermsMap: Record<BeautyProduct["category"], string> = {
+  const inSimplerTermsMap: Partial<Record<string, string>> = {
     cleanser: "简单说，它的核心价值是把脸清洁干净，同时尽量不过度带走皮肤水分。",
     serum: "简单说，它是集中护理步骤，用来针对性改善某个皮肤问题。",
     moisturizer: "简单说，它的作用是锁住水分、降低干燥和紧绷感。",
@@ -185,7 +185,7 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
   };
 
   return {
-    whatFor: `${product.name} 主要作为${productCategoryLabelMap[product.category]}使用，帮助你建立更稳定、舒适的日常流程。`,
+    whatFor: `${product.name} 主要作为${getCategoryLabel(product.category)}使用，帮助你建立更稳定、舒适的日常流程。`,
     benefits: [
       "帮助你更快做出产品选择，减少纠结",
       "让日常护肤更稳定、更可持续",
@@ -204,7 +204,7 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
     routineStep: defaults.routineStep || "灵活插入流程",
     keyTerms: [
       {
-        term: productCategoryLabelMap[product.category],
+        term: getCategoryLabel(product.category),
         explanation: "表示它在你的整体护肤流程中属于哪一类核心步骤。",
       },
       {
@@ -220,7 +220,7 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
         explanation: "代表这款产品更适合从低门槛、低风险方式开始尝试。",
       },
     ],
-    inSimplerTerms: inSimplerTermsMap[product.category],
+    inSimplerTerms: inSimplerTermsMap[product.category] || "简单说，它是你当前护理流程中的一个功能步骤，先从低频、低负担方式开始更稳妥。",
     ifYouAreNew: "如果你是护肤新手，先把步骤做少、做稳定，比追求复杂搭配更有效。",
     gentleWayToStart:
       product.status === "using"

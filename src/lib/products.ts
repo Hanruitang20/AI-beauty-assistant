@@ -8,7 +8,8 @@ export type BeautyProduct = {
   id: string;
   name: string;
   brand: string;
-  category: ProductCategory;
+  category: string;
+  categoryType?: "preset" | "custom";
   status: ProductStatus;
   sourceType: SourceType;
   sourceLink?: string;
@@ -29,6 +30,10 @@ export const productCategoryLabelMap: Record<ProductCategory, string> = {
   sunscreen: "防晒",
   makeup: "彩妆",
 };
+
+export function getCategoryLabel(category: string) {
+  return productCategoryLabelMap[category as ProductCategory] || category || "未分类";
+}
 
 export const sourceTypeLabelMap: Record<SourceType, string> = {
   "self-discovery": "自己发现",

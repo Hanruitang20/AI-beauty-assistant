@@ -4,12 +4,14 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { FeedbackState } from "@/components/ui/feedback-state";
-import { ProductCategory, ProductStatus, SourceType } from "@/lib/products";
+import { ProductStatus, SourceType } from "@/lib/products";
 
 export type ProductFormValues = {
   productName: string;
   brand: string;
-  category: ProductCategory | "";
+  category: string;
+  categoryType: "preset" | "custom";
+  customCategory: string;
   sourceType: SourceType | "";
   sourceLink: string;
   note: string;
@@ -36,6 +38,11 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
 
     if (!form.productName || !form.brand || !form.category || !form.sourceType || !form.status) {
       setError("请填写所有必填项。");
+      return;
+    }
+
+    if (form.categoryType === "custom" && !form.customCategory.trim()) {
+      setError("请选择“其他”时，请填写自定义品类。");
       return;
     }
 
@@ -79,7 +86,14 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
         <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">品类 *</span>
         <Select
           value={form.category}
-          onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value as ProductCategory }))}
+          onChange={(event) => {
+            const value = event.target.value;
+            setForm((prev) => ({
+              ...prev,
+              category: value,
+              categoryType: value === "other" ? "custom" : "preset",
+            }));
+          }}
         >
           <option value="">请选择品类</option>
           <option value="cleanser">洁面</option>
@@ -87,8 +101,19 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
           <option value="moisturizer">面霜/乳液</option>
           <option value="sunscreen">防晒</option>
           <option value="makeup">彩妆</option>
+          <option value="other">其他</option>
         </Select>
       </label>
+      {form.categoryType === "custom" ? (
+        <label className="block space-y-1.5">
+          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">请输入自定义品类 *</span>
+          <Input
+            value={form.customCategory}
+            placeholder="例如：美容仪 / 香氛 / 医美护理"
+            onChange={(event) => setForm((prev) => ({ ...prev, customCategory: event.target.value }))}
+          />
+        </label>
+      ) : null}
 
       <label className="block space-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">状态 *</span>

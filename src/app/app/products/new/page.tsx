@@ -10,6 +10,8 @@ const initialForm: ProductFormValues = {
   productName: "",
   brand: "",
   category: "",
+  categoryType: "preset",
+  customCategory: "",
   sourceType: "",
   sourceLink: "",
   note: "",
@@ -21,17 +23,19 @@ export default function NewProductPage() {
   const { showToast } = useToast();
 
   async function handleCreate(form: ProductFormValues) {
+    const normalizedCategory = form.categoryType === "custom" ? form.customCategory.trim() : form.category;
     const created = createProduct({
       name: form.productName,
       brand: form.brand,
-      category: form.category,
+      category: normalizedCategory,
+      categoryType: form.categoryType,
       sourceType: form.sourceType,
       sourceLink: form.sourceLink || undefined,
       note: form.note || undefined,
       status: form.status,
     });
-    showToast({ tone: "success", message: "产品已加入你的产品库。" });
-    router.push(`/app/products?created=${encodeURIComponent(created.name)}`);
+    showToast({ tone: "success", message: `已添加「${created.name}」` });
+    router.push(`/app/products?created=${encodeURIComponent(created.name)}&createdAt=${Date.now()}`);
   }
 
   return (

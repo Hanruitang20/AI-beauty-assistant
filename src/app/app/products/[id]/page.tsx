@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   BeautyProduct,
-  productCategoryLabelMap,
+  getCategoryLabel,
   productStatusLabelMap,
   sourceTypeLabelMap,
 } from "@/lib/products";
@@ -98,9 +98,9 @@ export default function ProductDetailPage() {
 
       <div className="space-y-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">{productCategoryLabelMap[product.category]}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">{getCategoryLabel(product.category)}</p>
           <h1 className="editorial-heading text-[30px] font-semibold tracking-tight text-[#3c3530]">{product.name}</h1>
-          <p className="text-sm text-[var(--text-muted)]">{product.brand} · {productCategoryLabelMap[product.category]}</p>
+          <p className="text-sm text-[var(--text-muted)]">{product.brand} · {getCategoryLabel(product.category)}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Link href={`/app/products/${product.id}/edit`}>
@@ -120,7 +120,7 @@ export default function ProductDetailPage() {
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">品类</p>
-            <p className="mt-1 font-medium text-[var(--foreground)]">{productCategoryLabelMap[product.category]}</p>
+            <p className="mt-1 font-medium text-[var(--foreground)]">{getCategoryLabel(product.category)}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">状态</p>

@@ -18,6 +18,10 @@ type AppShellProps = {
 };
 
 const headerTitleMap: Array<{ pattern: RegExp; title: string }> = [
+  { pattern: /^\/app\/products\/all$/, title: "全部产品" },
+  { pattern: /^\/app\/products\/categories$/, title: "分类浏览" },
+  { pattern: /^\/app\/products\/recent$/, title: "最近查看" },
+  { pattern: /^\/app\/products\/summaries$/, title: "已生成摘要" },
   { pattern: /^\/app\/products\/new$/, title: "新增产品" },
   { pattern: /^\/app\/products\/[^/]+\/edit$/, title: "编辑产品" },
   { pattern: /^\/app\/products\/[^/]+$/, title: "产品详情" },
@@ -31,6 +35,10 @@ const headerTitleMap: Array<{ pattern: RegExp; title: string }> = [
 ];
 
 const backEnabledPatterns = [
+  /^\/app\/products\/all$/,
+  /^\/app\/products\/categories$/,
+  /^\/app\/products\/recent$/,
+  /^\/app\/products\/summaries$/,
   /^\/app\/products\/new$/,
   /^\/app\/products\/[^/]+$/,
   /^\/app\/products\/[^/]+\/edit$/,
@@ -44,6 +52,7 @@ export function AppShell({ children }: AppShellProps) {
   const showBack = backEnabledPatterns.some((pattern) => pattern.test(pathname));
 
   function getBackFallbackPath() {
+    if (/^\/app\/products\/(all|categories|recent|summaries)$/.test(pathname)) return "/app/products";
     if (/^\/app\/profile\/edit$/.test(pathname)) return "/app/profile";
     if (/^\/app\/products\/new$/.test(pathname)) return "/app/products";
     if (/^\/app\/products\/[^/]+\/edit$/.test(pathname)) return pathname.replace(/\/edit$/, "");

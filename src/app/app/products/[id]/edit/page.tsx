@@ -31,7 +31,9 @@ export default function EditProductPage() {
   const initialValues: ProductFormValues = {
     productName: product.name,
     brand: product.brand,
-    category: product.category,
+    category: product.categoryType === "custom" ? "other" : product.category,
+    categoryType: product.categoryType || "preset",
+    customCategory: product.categoryType === "custom" ? product.category : "",
     sourceType: product.sourceType,
     sourceLink: product.sourceLink || "",
     note: product.note || "",
@@ -39,10 +41,12 @@ export default function EditProductPage() {
   };
 
   async function handleUpdate(values: ProductFormValues) {
+    const normalizedCategory = values.categoryType === "custom" ? values.customCategory.trim() : values.category;
     updateProduct(params.id, {
       name: values.productName,
       brand: values.brand,
-      category: values.category,
+      category: normalizedCategory,
+      categoryType: values.categoryType,
       sourceType: values.sourceType,
       sourceLink: values.sourceLink || undefined,
       note: values.note || undefined,
