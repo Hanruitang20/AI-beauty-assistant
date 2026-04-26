@@ -9,6 +9,7 @@ import { getStoredProducts } from "@/lib/products-store";
 import { getSavedProfile } from "@/lib/profile-store";
 import { getProfileDraft } from "@/lib/profile-draft";
 import { deriveUserAppState } from "@/lib/user-state";
+import { appendReturnTo } from "@/lib/navigation";
 
 export default function ProductsPage() {
   const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
@@ -89,10 +90,11 @@ export default function ProductsPage() {
 }
 
 function ProductListItem({ product }: { product: BeautyProduct }) {
+  const detailHref = appendReturnTo(`/app/products/${product.id}`, "/app/products");
   return (
     <div className="rounded-[18px] border bg-[var(--surface)] p-4 shadow-[0_4px_16px_rgba(60,53,48,0.04)]" style={{ borderColor: "var(--border-soft)" }}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href={`/app/products/${product.id}`} className="text-base font-semibold text-[var(--foreground)] hover:underline">
+        <Link href={detailHref} className="text-base font-semibold text-[var(--foreground)] hover:underline">
           {product.name}
         </Link>
         <span className="rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs font-medium text-[var(--accent-strong)]">
@@ -104,7 +106,7 @@ function ProductListItem({ product }: { product: BeautyProduct }) {
       </p>
       <p className="text-xs text-[var(--text-muted)]">来源：{sourceTypeLabelMap[product.sourceType]}</p>
       <div className="pt-2">
-        <Link href={`/app/products/${product.id}`}>
+        <Link href={detailHref}>
           <Button variant="secondary" className="h-9 w-full px-3 py-0 text-xs">
             查看详情
           </Button>

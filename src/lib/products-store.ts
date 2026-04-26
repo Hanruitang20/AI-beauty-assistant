@@ -3,6 +3,7 @@ import { BeautyProduct, getCategoryLabel, productStatusLabelMap } from "@/lib/pr
 const PRODUCTS_KEY = "beautyshelf.products";
 const SUMMARY_KEY = "beautyshelf.product-summaries";
 const RECENT_VIEWED_KEY = "beautyshelf.recent-viewed-products";
+const PRODUCT_IMAGES_KEY = "beautyshelf.product-images";
 
 export type ProductSummary = {
   whatFor: string;
@@ -109,6 +110,38 @@ export function deleteProductById(id: string) {
   if (hasWindow()) {
     window.localStorage.setItem(RECENT_VIEWED_KEY, JSON.stringify(recent));
   }
+
+  const imageMap = getProductImageMap();
+  if (imageMap[id]) {
+    const restImages = { ...imageMap };
+    delete restImages[id];
+    if (hasWindow()) {
+      window.localStorage.setItem(PRODUCT_IMAGES_KEY, JSON.stringify(restImages));
+    }
+  }
+}
+
+function getProductImageMap(): Record<string, string> {
+  if (!hasWindow()) return {};
+  const raw = window.localStorage.getItem(PRODUCT_IMAGES_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getProductImageById(id: string) {
+  return getProductImageMap()[id] || "";
+}
+
+export function saveProductImageById(id: string, imageDataUrl: string) {
+  if (!hasWindow()) return;
+  const all = getProductImageMap();
+  const next = { ...all, [id]: imageDataUrl };
+  window.localStorage.setItem(PRODUCT_IMAGES_KEY, JSON.stringify(next));
 }
 
 export function getSummaryMap(): ProductSummaryMap {

@@ -5,14 +5,14 @@ import { ChangeEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getSavedProfile } from "@/lib/profile-store";
+import { getProfile, getUserAvatar, saveUserAvatar } from "@/lib/profile-service";
 import { getMockUser, signOutMock } from "@/lib/mock-auth";
 import { getStoredProducts } from "@/lib/products-store";
 import { getCategoryLabel } from "@/lib/products";
 import { queueToast } from "@/lib/flash-toast";
 import { useToast } from "@/components/ui/toast-provider";
-
-const MOCK_USER_AVATAR_KEY = "beautyshelf.mock-user-avatar";
+import { buildProductJourneyPreview } from "@/lib/product-journey";
+import { appendReturnTo } from "@/lib/navigation";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -20,38 +20,13 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const user = getMockUser();
   const products = getStoredProducts();
-  const savedProfile = getSavedProfile();
-  const [avatar, setAvatar] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return window.localStorage.getItem(MOCK_USER_AVATAR_KEY) || "";
-  });
+  const savedProfile = getProfile();
+  const [avatar, setAvatar] = useState(() => getUserAvatar());
   const profileMainConcerns = savedProfile?.mainConcerns || "未填写";
   const profileSkinType = savedProfile?.skinType || "未填写";
   const profileSensitivity = savedProfile?.sensitivityLevel || "未填写";
   const profileExperience = savedProfile?.experienceLevel || "未填写";
-  const monthLabels = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 4 }).map((_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - (3 - index), 1);
-      return `${date.getMonth() + 1}月`;
-    });
-  }, []);
-  const journeyProducts = useMemo(() => products.slice(0, 3), [products]);
-
-  function getJourneyWidth(months?: number) {
-    const value = months ?? 0;
-    if (value >= 6) return "w-full";
-    if (value >= 4) return "w-4/5";
-    if (value >= 2) return "w-3/5";
-    if (value >= 1) return "w-2/5";
-    return "w-1/4";
-  }
-
-  function getJourneyLabel(months?: number) {
-    const value = months ?? 0;
-    if (value <= 0) return "记录中";
-    return `使用中 ${value} 个月`;
-  }
+  const journeyPreview = useMemo(() => buildProductJourneyPreview(products, 3), [products]);
 
   function handleAvatarPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -65,7 +40,7 @@ export default function ProfilePage() {
       const dataUrl = typeof reader.result === "string" ? reader.result : "";
       if (!dataUrl) return;
       setAvatar(dataUrl);
-      window.localStorage.setItem(MOCK_USER_AVATAR_KEY, dataUrl);
+      saveUserAvatar(dataUrl);
       showToast({ tone: "success", message: "头像已更新。" });
     };
     reader.readAsDataURL(file);
@@ -113,7 +88,7 @@ export default function ProfilePage() {
           </Link>
         </div>
         <Card className="rounded-[24px]">
-          {journeyProducts.length === 0 ? (
+          {journeyPreview.items.length === 0 ? (
             <div className="space-y-3">
               <p className="text-sm text-[var(--foreground)]">还没有产品旅程</p>
               <p className="text-sm text-[var(--text-muted)]">添加产品后，这里会展示你的产品记录时间线。</p>
@@ -124,19 +99,19 @@ export default function ProfilePage() {
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-4 border-b pb-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]" style={{ borderColor: "var(--border-soft)" }}>
-                {monthLabels.map((month) => (
+                {journeyPreview.monthLabels.map((month) => (
                   <span key={month}>{month}</span>
                 ))}
               </div>
               <div className="space-y-3">
-                {journeyProducts.map((product) => (
-                  <Link key={product.id} href={`/app/products/${product.id}`} className="block">
+                {journeyPreview.items.map((item) => (
+                  <Link key={item.id} href={appendReturnTo(`/app/products/${item.id}`, "/app/profile")} className="block">
                     <div className="space-y-1">
-                      <div className={`h-8 ${getJourneyWidth(product.usageDurationMonths)} rounded-r-md border-l-4 bg-[var(--surface-soft)] px-3 py-1`} style={{ borderLeftColor: "var(--accent)" }}>
-                        <p className="truncate text-xs font-semibold text-[var(--foreground)]">{product.name}</p>
+                      <div className={`h-8 ${item.widthClassName} rounded-r-md border-l-4 bg-[var(--surface-soft)] px-3 py-1`} style={{ borderLeftColor: "var(--accent)" }}>
+                        <p className="truncate text-xs font-semibold text-[var(--foreground)]">{item.name}</p>
                       </div>
                       <p className="text-[10px] text-[var(--text-muted)]">
-                        {getCategoryLabel(product.category)} · {getJourneyLabel(product.usageDurationMonths)}
+                        {getCategoryLabel(item.category)} · {item.usageLabel}
                       </p>
                     </div>
                   </Link>

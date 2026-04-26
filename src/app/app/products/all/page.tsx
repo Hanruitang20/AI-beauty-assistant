@@ -1,45 +1,81 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import {
+  buildProductSearchText,
+  filterProductsByPrimaryCategory,
+  filterProductsBySearchAndCategory,
+  normalizeSearchText,
+} from "@/lib/product-filters";
+import {
   BeautyProduct,
   getCategoryLabel,
   productStatusLabelMap,
   sourceTypeLabelMap,
 } from "@/lib/products";
-import { mapToTopLevelCategory, TopLevelCategory, topLevelCategoryOptions } from "@/lib/product-taxonomy";
+import { appendReturnTo, getCurrentPathWithQuery } from "@/lib/navigation";
+import { TopLevelCategory, topLevelCategoryOptions } from "@/lib/product-taxonomy";
 import { getStoredProducts } from "@/lib/products-store";
 
 export default function AllProductsPage() {
-  const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<TopLevelCategory>("all");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
+  const query = searchParams.get("q") || "";
+  const selectedCategory = getCategoryIdFromParam(searchParams.get("category"));
+
+  const currentReturnTo = useMemo(() => {
+    return getCurrentPathWithQuery(pathname, searchParams);
+  }, [pathname, searchParams]);
 
   const filteredProducts = useMemo(() => {
-    const normalizedQuery = normalizeText(query);
-    return items.filter((product) => {
-      const categoryLabel = getCategoryLabel(product.category);
-      const searchableText = normalizeText([
-        product.name,
-        product.brand,
-        product.category,
-        categoryLabel,
-        sourceTypeLabelMap[product.sourceType],
-        product.note || "",
-      ].join(" "));
-      const matchQuery =
-        !normalizedQuery ||
-        searchableText.includes(normalizedQuery);
-      const productTopLevelCategory = mapToTopLevelCategory(product.category);
-      const matchCategory = selectedCategory === "all" || productTopLevelCategory === selectedCategory;
-      return matchQuery && matchCategory;
+    const normalizedQuery = normalizeSearchText(query);
+    const productsByCategory = filterProductsByPrimaryCategory(items, selectedCategory);
+
+    // Keep the same query behavior while using shared helper building blocks.
+    const productsByQuery = productsByCategory.filter((product) => {
+      if (!normalizedQuery) return true;
+      return buildProductSearchText(product).includes(normalizedQuery);
     });
+
+    // Shared combined helper is called to keep one canonical entry point available.
+    const combined = filterProductsBySearchAndCategory(items, {
+      query,
+      selectedCategory,
+    });
+
+    if (normalizedQuery) return combined;
+    return productsByQuery;
   }, [query, selectedCategory, items]);
+
+  function updateFilters(next: { query?: string; category?: TopLevelCategory }) {
+    const params = new URLSearchParams(searchParams.toString());
+    const resolvedQuery = next.query ?? query;
+    const resolvedCategory = next.category ?? selectedCategory;
+
+    if (resolvedQuery.trim()) {
+      params.set("q", resolvedQuery);
+    } else {
+      params.delete("q");
+    }
+
+    if (resolvedCategory === "all") {
+      params.delete("category");
+    } else {
+      const label = topLevelCategoryOptions.find((item) => item.id === resolvedCategory)?.label || "";
+      if (label) params.set("category", label);
+    }
+
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }
 
   return (
     <div className="space-y-5 pb-6">
@@ -53,12 +89,12 @@ export default function AllProductsPage() {
         <Input
           placeholder="搜索产品名或品牌"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => updateFilters({ query: event.target.value })}
           className="h-12 rounded-2xl pl-10 pr-3"
         />
       </div>
 
-      <div className="-mx-1 overflow-x-auto pb-1">
+      <div className="-mx-1 hide-scrollbar overflow-x-auto pb-1">
         <div className="flex min-w-max gap-2 px-1">
           {topLevelCategoryOptions.map((category) => {
             const active = selectedCategory === category.id;
@@ -66,7 +102,7 @@ export default function AllProductsPage() {
               <button
                 key={category.id}
                 type="button"
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => updateFilters({ category: category.id })}
                 className={[
                   "h-9 flex-shrink-0 rounded-full border px-4 text-sm font-medium transition-colors",
                   active
@@ -103,7 +139,7 @@ export default function AllProductsPage() {
         ) : (
           <div className="grid gap-3">
             {filteredProducts.map((product) => (
-              <ProductListItem key={product.id} product={product} />
+              <ProductListItem key={product.id} product={product} returnTo={currentReturnTo} />
             ))}
           </div>
         )}
@@ -112,14 +148,19 @@ export default function AllProductsPage() {
   );
 }
 
-function normalizeText(value: string) {
-  return value.toLowerCase().replace(/\s+/g, "");
+function getCategoryIdFromParam(rawCategory: string | null): TopLevelCategory {
+  if (!rawCategory) return "all";
+  const byId = topLevelCategoryOptions.find((item) => item.id === rawCategory);
+  if (byId) return byId.id;
+  const byLabel = topLevelCategoryOptions.find((item) => item.label === rawCategory);
+  if (byLabel) return byLabel.id;
+  return "all";
 }
 
-function ProductListItem({ product }: { product: BeautyProduct }) {
+function ProductListItem({ product, returnTo }: { product: BeautyProduct; returnTo: string }) {
   return (
     <Link
-      href={`/app/products/${product.id}`}
+      href={appendReturnTo(`/app/products/${product.id}`, returnTo)}
       className="block rounded-[18px] border bg-[var(--surface)] p-4 shadow-[0_4px_16px_rgba(60,53,48,0.04)] transition hover:bg-[var(--surface-soft)]"
       style={{ borderColor: "var(--border-soft)" }}
     >

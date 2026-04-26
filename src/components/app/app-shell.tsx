@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MobileAppFrame } from "@/components/layout/mobile-app-frame";
 import { Button } from "@/components/ui/button";
+import { getSafeReturnTo } from "@/lib/navigation";
 
 const bottomNavItems = [
   { href: "/app/products", label: "产品库" },
@@ -49,21 +50,39 @@ const backEnabledPatterns = [
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const headerTitle = headerTitleMap.find((item) => item.pattern.test(pathname))?.title || "BeautyShelf AI";
   const showBack = backEnabledPatterns.some((pattern) => pattern.test(pathname));
 
   function getBackFallbackPath() {
-    if (/^\/app\/notifications$/.test(pathname)) return "/app/products";
-    if (/^\/app\/products\/(all|categories|recent|summaries)$/.test(pathname)) return "/app/products";
-    if (/^\/app\/profile\/edit$/.test(pathname)) return "/app/profile";
-    if (/^\/app\/products\/new$/.test(pathname)) return "/app/products";
-    if (/^\/app\/products\/[^/]+\/edit$/.test(pathname)) return pathname.replace(/\/edit$/, "");
-    if (/^\/app\/products\/[^/]+$/.test(pathname)) return "/app/products";
-    return "/app/products";
+    const safeReturnTo = getSafeReturnTo(searchParams.get("returnTo"), "");
+    if (safeReturnTo) return safeReturnTo;
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length <= 1) return "/app/products";
+    const parentPath = `/${parts.slice(0, -1).join("/")}`;
+    return parentPath || "/app/products";
   }
 
   function handleBack() {
+    if (pathname === "/app/products/all") {
+      const safeReturnTo = getSafeReturnTo(searchParams.get("returnTo"), "/app/products");
+      router.replace(safeReturnTo);
+      return;
+    }
+
+    if (/^\/app\/products\/[^/]+$/.test(pathname)) {
+      const safeReturnTo = getSafeReturnTo(searchParams.get("returnTo"), "/app/products");
+      router.replace(safeReturnTo);
+      return;
+    }
+
+    const safeReturnTo = getSafeReturnTo(searchParams.get("returnTo"), "");
+    if (safeReturnTo) {
+      // Replace avoids keeping current detail page in history stack.
+      router.replace(safeReturnTo);
+      return;
+    }
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
       return;
