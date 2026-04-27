@@ -30,33 +30,8 @@ import {
   deleteProductExperience,
   getProductExperience,
   ProductExperience,
-  ProductIntention,
-  ProductReaction,
-  ProductUsageFrequency,
-  saveProductExperience,
 } from "@/lib/product-experience-service";
-
-const usageFrequencyOptions: Array<{ value: ProductUsageFrequency; label: string }> = [
-  { value: "daily", label: "每天" },
-  { value: "weekly", label: "每周几次" },
-  { value: "occasionally", label: "偶尔" },
-  { value: "not_started", label: "还没开始" },
-];
-
-const reactionOptions: Array<{ value: ProductReaction; label: string }> = [
-  { value: "none", label: "没有" },
-  { value: "uncomfortable", label: "有点不舒服" },
-  { value: "irritating_or_breakout", label: "闷痘或刺激" },
-  { value: "dry_or_tight", label: "干燥或紧绷" },
-  { value: "unsure", label: "不确定" },
-];
-
-const intentionOptions: Array<{ value: ProductIntention; label: string }> = [
-  { value: "continue", label: "继续用" },
-  { value: "repurchase", label: "可能回购" },
-  { value: "stop", label: "不会回购" },
-  { value: "observing", label: "还在观察" },
-];
+import { ProductExperienceCard } from "@/components/products/product-experience-card";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -115,12 +90,6 @@ export default function ProductDetailPage() {
     setSummary(generated);
     setLoadingSummary(false);
     setSummaryStatusText("摘要已更新，你可以继续刷新以查看不同角度的说明。");
-  }
-
-  function updateExperience(patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>) {
-    const next = saveProductExperience(productId, patch);
-    setExperience(next);
-    showToast({ tone: "success", message: "已更新使用感受" });
   }
 
   function handleConfirmDelete() {
@@ -221,46 +190,12 @@ export default function ProductDetailPage() {
       <ProductSummaryPanel summary={summary} loading={loadingSummary} onGenerate={handleGenerateSummary} />
       {summaryStatusText ? <FeedbackState tone={loadingSummary ? "info" : "success"}>{summaryStatusText}</FeedbackState> : null}
 
-      <Card className="space-y-4 rounded-[24px]">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">我的使用感受</h2>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((score) => {
-              const active = (experience?.rating || 0) >= score;
-              return (
-                <button
-                  key={score}
-                  type="button"
-                  aria-label={`评分 ${score} 星`}
-                  onClick={() => updateExperience({ rating: score as 1 | 2 | 3 | 4 | 5 })}
-                  className={`text-lg transition-colors ${active ? "text-[var(--accent)]" : "text-[var(--border-soft)] hover:text-[var(--accent)]"}`}
-                >
-                  ★
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <ExperienceChips
-          title="使用频率"
-          options={usageFrequencyOptions}
-          selected={experience?.usageFrequency}
-          onSelect={(value) => updateExperience({ usageFrequency: value })}
-        />
-        <ExperienceChips
-          title="不适反应"
-          options={reactionOptions}
-          selected={experience?.reaction}
-          onSelect={(value) => updateExperience({ reaction: value })}
-        />
-        <ExperienceChips
-          title="后续意愿"
-          options={intentionOptions}
-          selected={experience?.intention}
-          onSelect={(value) => updateExperience({ intention: value })}
-        />
-      </Card>
+      <ProductExperienceCard
+        productId={productId}
+        productCategory={product.category}
+        initialExperience={experience}
+        onUpdated={setExperience}
+      />
 
       {product.note ? (
         <Card className="space-y-2 rounded-[24px]">
@@ -297,45 +232,6 @@ export default function ProductDetailPage() {
           </div>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function ExperienceChips<T extends string>({
-  title,
-  options,
-  selected,
-  onSelect,
-}: {
-  title: string;
-  options: Array<{ value: T; label: string }>;
-  selected?: T;
-  onSelect: (value: T) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{title}</p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const active = selected === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onSelect(option.value)}
-              className={[
-                "h-8 rounded-full border px-3 text-xs font-medium transition-colors",
-                active
-                  ? "bg-[var(--accent)] text-white"
-                  : "bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-soft)]",
-              ].join(" ")}
-              style={{ borderColor: active ? "var(--accent)" : "var(--border-soft)" }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

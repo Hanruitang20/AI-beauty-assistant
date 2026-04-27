@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BeautyProduct, getCategoryLabel, productStatusLabelMap, sourceTypeLabelMap } from "@/lib/products";
+import { BeautyProduct, productStatusLabelMap, sourceTypeLabelMap } from "@/lib/products";
 import { getStoredProducts } from "@/lib/products-store";
 import { getSavedProfile } from "@/lib/profile-store";
 import { getProfileDraft } from "@/lib/profile-draft";
 import { deriveUserAppState } from "@/lib/user-state";
 import { appendReturnTo } from "@/lib/navigation";
+import { getExperiencesByProductIds } from "@/lib/product-experience-service";
 
 export default function ProductsPage() {
   const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
@@ -23,6 +24,7 @@ export default function ProductsPage() {
   });
 
   const recentAdded = items.slice(0, 3);
+  const experiencesByProductId = getExperiencesByProductIds(recentAdded.map((item) => item.id));
 
   return (
     <div className="space-y-7">
@@ -31,18 +33,13 @@ export default function ProductsPage() {
           <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">我的产品库</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">先记录你最近关注的产品，再进入完整产品库管理。</p>
         </div>
-        {!userState.productCount ? null : (
-          <div className={userState.hasProfile ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
-            <Link href="/app/products/new">
-              <Button className="w-full">添加产品</Button>
+        {!userState.productCount ? null : !userState.hasProfile ? (
+          <div className="grid grid-cols-1 gap-2">
+            <Link href="/app/assessment?returnTo=%2Fapp%2Fproducts">
+              <Button variant="secondary" className="w-full">完善个人信息</Button>
             </Link>
-            {!userState.hasProfile ? (
-              <Link href="/app/assessment?returnTo=%2Fapp%2Fproducts">
-                <Button variant="secondary" className="w-full">完善个人信息</Button>
-              </Link>
-            ) : null}
           </div>
-        )}
+        ) : null}
       </div>
 
       {!userState.productCount ? (
@@ -79,17 +76,27 @@ export default function ProductsPage() {
             </div>
             <div className="grid gap-3">
               {recentAdded.map((product) => (
-                <ProductListItem key={product.id} product={product} />
+                <ProductListItem key={product.id} product={product} rating={experiencesByProductId[product.id]?.rating} />
               ))}
             </div>
           </Card>
         </div>
       )}
+
+      {userState.productCount ? (
+        <Link
+          href="/app/products/new?returnTo=%2Fapp%2Fproducts"
+          className="fixed bottom-[88px] right-6 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-2xl text-white shadow-[0_10px_24px_rgba(60,53,48,0.2)] active:scale-[0.98]"
+          aria-label="添加产品"
+        >
+          +
+        </Link>
+      ) : null}
     </div>
   );
 }
 
-function ProductListItem({ product }: { product: BeautyProduct }) {
+function ProductListItem({ product, rating }: { product: BeautyProduct; rating?: number }) {
   const detailHref = appendReturnTo(`/app/products/${product.id}`, "/app/products");
   return (
     <div className="rounded-[18px] border bg-[var(--surface)] p-4 shadow-[0_4px_16px_rgba(60,53,48,0.04)]" style={{ borderColor: "var(--border-soft)" }}>
@@ -101,10 +108,14 @@ function ProductListItem({ product }: { product: BeautyProduct }) {
           {productStatusLabelMap[product.status]}
         </span>
       </div>
-      <p className="mt-1 text-sm text-[var(--text-muted)]">
-        {product.brand} · {getCategoryLabel(product.category)}
-      </p>
-      <p className="text-xs text-[var(--text-muted)]">来源：{sourceTypeLabelMap[product.sourceType]}</p>
+      {typeof rating === "number" ? (
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <span className="text-[var(--accent)]">{"★".repeat(Math.max(0, Math.min(5, rating)))}</span>
+          <span className="text-[var(--border-soft)]">{"☆".repeat(Math.max(0, 5 - Math.min(5, rating)))}</span>
+          <span className="ml-1">{Math.min(5, Math.max(0, rating))}/5</span>
+        </p>
+      ) : null}
+      <p className="mt-1 text-xs text-[var(--text-muted)]">来源：{sourceTypeLabelMap[product.sourceType]}</p>
       <div className="pt-2">
         <Link href={detailHref}>
           <Button variant="secondary" className="h-9 w-full px-3 py-0 text-xs">

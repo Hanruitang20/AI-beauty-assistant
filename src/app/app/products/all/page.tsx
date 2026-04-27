@@ -15,19 +15,20 @@ import {
 } from "@/lib/product-filters";
 import {
   BeautyProduct,
-  getCategoryLabel,
   productStatusLabelMap,
   sourceTypeLabelMap,
 } from "@/lib/products";
 import { appendReturnTo, getCurrentPathWithQuery } from "@/lib/navigation";
 import { TopLevelCategory, topLevelCategoryOptions } from "@/lib/product-taxonomy";
 import { getStoredProducts } from "@/lib/products-store";
+import { getExperiencesByProductIds } from "@/lib/product-experience-service";
 
 export default function AllProductsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
+  const experiencesByProductId = getExperiencesByProductIds(items.map((item) => item.id));
   const query = searchParams.get("q") || "";
   const selectedCategory = getCategoryIdFromParam(searchParams.get("category"));
 
@@ -139,7 +140,12 @@ export default function AllProductsPage() {
         ) : (
           <div className="grid gap-3">
             {filteredProducts.map((product) => (
-              <ProductListItem key={product.id} product={product} returnTo={currentReturnTo} />
+              <ProductListItem
+                key={product.id}
+                product={product}
+                returnTo={currentReturnTo}
+                rating={experiencesByProductId[product.id]?.rating}
+              />
             ))}
           </div>
         )}
@@ -157,7 +163,7 @@ function getCategoryIdFromParam(rawCategory: string | null): TopLevelCategory {
   return "all";
 }
 
-function ProductListItem({ product, returnTo }: { product: BeautyProduct; returnTo: string }) {
+function ProductListItem({ product, returnTo, rating }: { product: BeautyProduct; returnTo: string; rating?: number }) {
   return (
     <Link
       href={appendReturnTo(`/app/products/${product.id}`, returnTo)}
@@ -170,10 +176,14 @@ function ProductListItem({ product, returnTo }: { product: BeautyProduct; return
           {productStatusLabelMap[product.status]}
         </span>
       </div>
-      <p className="mt-1 text-sm text-[var(--text-muted)]">
-        {product.brand} · {getCategoryLabel(product.category)}
-      </p>
-      <p className="text-xs text-[var(--text-muted)]">来源：{sourceTypeLabelMap[product.sourceType]}</p>
+      {typeof rating === "number" ? (
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          <span className="text-[var(--accent)]">{"★".repeat(Math.max(0, Math.min(5, rating)))}</span>
+          <span className="text-[var(--border-soft)]">{"☆".repeat(Math.max(0, 5 - Math.min(5, rating)))}</span>
+          <span className="ml-1">{Math.min(5, Math.max(0, rating))}/5</span>
+        </p>
+      ) : null}
+      <p className="mt-1 text-xs text-[var(--text-muted)]">来源：{sourceTypeLabelMap[product.sourceType]}</p>
     </Link>
   );
 }

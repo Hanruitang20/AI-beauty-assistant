@@ -1,6 +1,22 @@
 export type ProductRating = 1 | 2 | 3 | 4 | 5;
 export type ProductUsageFrequency = "daily" | "weekly" | "occasionally" | "not_started";
-export type ProductReaction = "none" | "uncomfortable" | "irritating_or_breakout" | "dry_or_tight" | "unsure";
+export type ProductReaction =
+  | "none"
+  | "no_issue"
+  | "uncomfortable"
+  | "irritating_or_breakout"
+  | "dry_or_tight"
+  | "texture_not_ideal"
+  | "drying_or_cakey"
+  | "not_smooth_or_pilling"
+  | "poor_longevity"
+  | "finish_not_ideal"
+  | "greasy_or_heavy"
+  | "scalp_or_body_discomfort"
+  | "unclear_effect"
+  | "scent_discomfort"
+  | "hard_to_use"
+  | "unsure";
 export type ProductIntention = "continue" | "repurchase" | "stop" | "observing";
 
 export type ProductExperience = {
@@ -9,6 +25,7 @@ export type ProductExperience = {
   usageFrequency?: ProductUsageFrequency;
   reaction?: ProductReaction;
   intention?: ProductIntention;
+  feedbackNote?: string;
   updatedAt: string;
 };
 

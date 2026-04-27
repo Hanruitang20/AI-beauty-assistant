@@ -12,18 +12,23 @@ import { BeautyProduct } from "@/lib/products";
 import { PRODUCT_PRIMARY_CATEGORIES, ProductPrimaryCategory } from "@/lib/product-categories";
 import { buildRecommendationViewModel, RecommendationInsight } from "@/lib/recommendation-service";
 import { appendReturnTo } from "@/lib/navigation";
+import { getExperiencesByProductIds } from "@/lib/product-experience-service";
 
 export default function RecommendationsPage() {
   const savedProfile = getSavedProfile();
   const profileDraft = getProfileDraft() || null;
   const products = getStoredProducts();
+  const experiencesByProductId = getExperiencesByProductIds(products.map((product) => product.id));
   const [analysisCategory, setAnalysisCategory] = useState<ProductPrimaryCategory>("all");
+  const [analysisRefreshSeed, setAnalysisRefreshSeed] = useState(0);
   const recommendationView = buildRecommendationViewModel({
     products,
     profile: savedProfile || null,
     assessmentDraft: profileDraft || null,
     selectedCategory: analysisCategory,
     isSignedIn: true,
+    experiencesByProductId,
+    refreshSeed: analysisRefreshSeed,
   });
 
   if (recommendationView.state === "A_EMPTY_NO_PROFILE") {
@@ -77,12 +82,28 @@ export default function RecommendationsPage() {
         <Card className="space-y-3 rounded-[24px]">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">产品记录概览</h2>
           <p className="text-sm text-[var(--text-muted)]">已记录 {products.length} 个产品。</p>
+          {recommendationView.scopedExperienceCount > 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">
+              当前分类下已记录 {recommendationView.scopedExperienceCount} 个使用感受，其中 {recommendationView.scopedRatedProductCount} 个已有评分。
+            </p>
+          ) : null}
           <p className="text-sm text-[var(--text-muted)]">
             状态分布：正在使用 {recommendationView.statusCount.using || 0} · 想购买 {recommendationView.statusCount.wishlist || 0} · 被推荐 {recommendationView.statusCount.recommended || 0} · 用过 {recommendationView.statusCount.used || 0}
           </p>
         </Card>
         <Card className="space-y-3 rounded-[24px]">
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
+            <button
+              type="button"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              style={{ borderColor: "var(--border-soft)" }}
+              aria-label="刷新产品分析"
+              onClick={() => setAnalysisRefreshSeed((seed) => seed + 1)}
+            >
+              ↻
+            </button>
+          </div>
           <p className="text-sm text-[var(--foreground)]">
             目前只能基于你记录的产品做初步整理。完善个人信息后，我才能结合你的肤质、敏感程度和主要诉求，给出更适合你的建议。
           </p>
@@ -117,13 +138,29 @@ export default function RecommendationsPage() {
         <h2 className="text-sm font-semibold text-[var(--foreground)]">产品记录概览</h2>
         <div className="grid gap-2 text-sm text-[var(--text-muted)]">
           <p>已记录 {products.length} 个产品。</p>
+          {recommendationView.scopedExperienceCount > 0 ? (
+            <p>
+              当前分类下已记录 {recommendationView.scopedExperienceCount} 个使用感受，其中 {recommendationView.scopedRatedProductCount} 个已有评分。
+            </p>
+          ) : null}
           <p>当前主要集中在：{recommendationView.topCategoryLabel}。</p>
           <p>状态分布：正在使用 {recommendationView.statusCount.using || 0} · 想购买 {recommendationView.statusCount.wishlist || 0} · 被推荐 {recommendationView.statusCount.recommended || 0} · 用过 {recommendationView.statusCount.used || 0}</p>
         </div>
       </Card>
 
       <Card className="space-y-3 rounded-[24px]">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
+            style={{ borderColor: "var(--border-soft)" }}
+            aria-label="刷新产品分析"
+            onClick={() => setAnalysisRefreshSeed((seed) => seed + 1)}
+          >
+            ↻
+          </button>
+        </div>
         <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
         <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={recommendationView.scopedInsights} />
       </Card>

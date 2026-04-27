@@ -13,6 +13,7 @@ import { queueToast } from "@/lib/flash-toast";
 import { useToast } from "@/components/ui/toast-provider";
 import { buildProductJourneyPreview } from "@/lib/product-journey";
 import { appendReturnTo } from "@/lib/navigation";
+import { getExperiencesByProductIds } from "@/lib/product-experience-service";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function ProfilePage() {
   const profileSensitivity = savedProfile?.sensitivityLevel || "未填写";
   const profileExperience = savedProfile?.experienceLevel || "未填写";
   const journeyPreview = useMemo(() => buildProductJourneyPreview(products, 3), [products]);
+  const journeyExperiences = getExperiencesByProductIds(journeyPreview.items.map((item) => item.id));
 
   function handleAvatarPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -113,6 +115,17 @@ export default function ProfilePage() {
                       <p className="text-[10px] text-[var(--text-muted)]">
                         {getCategoryLabel(item.category)} · {item.usageLabel}
                       </p>
+                      {typeof journeyExperiences[item.id]?.rating === "number" ? (
+                        <p className="text-[10px] text-[var(--text-muted)]">
+                          <span className="text-[var(--accent)]">
+                            {"★".repeat(Math.max(0, Math.min(5, journeyExperiences[item.id]?.rating || 0)))}
+                          </span>
+                          <span className="text-[var(--border-soft)]">
+                            {"☆".repeat(Math.max(0, 5 - Math.min(5, journeyExperiences[item.id]?.rating || 0)))}
+                          </span>
+                          <span className="ml-1">{journeyExperiences[item.id]?.rating}/5</span>
+                        </p>
+                      ) : null}
                     </div>
                   </Link>
                 ))}
