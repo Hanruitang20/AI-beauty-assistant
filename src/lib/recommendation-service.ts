@@ -125,14 +125,6 @@ export function buildProductInsights(input: {
   const top = entries[0];
 
   const hasSunscreen = input.products.some((item) => item.category.includes("sunscreen") || item.category.includes("防晒"));
-  const hasLip = input.products.some((item) => {
-    const category = item.category.toLowerCase();
-    return category.includes("唇") || category.includes("lip");
-  });
-  const hasBodyOrHair = input.products.some((item) => {
-    const category = item.category.toLowerCase();
-    return category.includes("body") || category.includes("hair") || category.includes("身体") || category.includes("头发");
-  });
   const categoryLabel = input.selectedCategory === "all" ? "全部产品" : getTopLevelCategoryLabel(input.selectedCategory);
   const scopedExperiences = input.products
     .map((item) => input.experiencesByProductId?.[item.id])
@@ -149,13 +141,9 @@ export function buildProductInsights(input: {
   insights.push({
     title: "搭配关系提示",
     reason:
-      input.selectedCategory === "makeup" && hasLip
-        ? "美妆记录里包含唇部相关产品，建议补充妆效、持久度、是否拔干和叠涂体验。"
-        : input.selectedCategory === "body-hair" && hasBodyOrHair
-          ? "身体&头发类产品建议关注使用频率、肤感/发感、香味接受度和是否油腻。"
-          : hasSunscreen
-            ? "记录里有防晒相关产品，建议结合底妆或日间步骤观察叠加后的肤感与稳定性。"
-            : "可先按当前记录梳理常见使用顺序，减少一次上太多新品带来的干扰。",
+      hasSunscreen
+        ? "记录里包含防晒相关产品，建议结合日间流程观察叠加后的肤感、泛红风险和稳定性。"
+        : "建议先梳理当前产品在早晚护肤流程中的顺序，减少一次上太多新品带来的刺激风险。",
     nextStep: "先固定基础步骤，再一次只新增一个变量观察 5-7 天。",
   });
   const infoGapInsight: RecommendationInsight = {
@@ -204,7 +192,7 @@ function buildExperienceInsight(input: {
     if (avg < 3) {
       candidates.push({
         title: "先关注低评分产品的共同点",
-        reason: "当前范围内有评分偏低的记录，可以回看它们的品类、状态和使用感受，减少相似方向的重复尝试。",
+      reason: "当前范围内有评分偏低的记录，可以回看它们的品类、使用频率和肤感反馈，减少相似方向的重复尝试。",
         nextStep: "先暂停低评分方向的新增尝试，优先观察已有稳定项。",
       });
     }
@@ -217,10 +205,17 @@ function buildExperienceInsight(input: {
   }
 
   const reactionSet = new Set(scopedExperiences.map((item) => item.reaction).filter(Boolean));
-  if (reactionSet.has("irritating_or_breakout") || reactionSet.has("dry_or_tight") || reactionSet.has("uncomfortable")) {
+  if (
+    reactionSet.has("irritating_or_breakout") ||
+    reactionSet.has("stinging_or_redness") ||
+    reactionSet.has("dry_or_tight") ||
+    reactionSet.has("too_oily_or_heavy") ||
+    reactionSet.has("clogging_or_breakout") ||
+    reactionSet.has("uncomfortable")
+  ) {
     candidates.push({
       title: "先留意不适反应",
-      reason: "当前范围内记录过不舒服、刺激或干燥紧绷等反应，建议先减少同时尝试的变量，再观察是否与某类产品反复相关。",
+      reason: "当前范围内记录过刺痛泛红、闷痘闭口或厚重不适等反应，建议先减少同时尝试的变量，再观察是否与某类产品反复相关。",
       nextStep: "先稳定 5-7 天，只保留基础步骤并记录变化。",
     });
   }

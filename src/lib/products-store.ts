@@ -1,9 +1,10 @@
 import { BeautyProduct, getCategoryLabel, productStatusLabelMap } from "@/lib/products";
+import { getScopedStorageKey, getScopedStorageKeyWithLegacyMigration } from "@/lib/storage-scope";
 
-const PRODUCTS_KEY = "beautyshelf.products";
+const PRODUCTS_KEY = "products";
 const SUMMARY_KEY = "beautyshelf.product-summaries";
-const RECENT_VIEWED_KEY = "beautyshelf.recent-viewed-products";
-const PRODUCT_IMAGES_KEY = "beautyshelf.product-images";
+const RECENT_VIEWED_KEY = "recent-viewed-products";
+const PRODUCT_IMAGES_KEY = "product-images";
 
 export type ProductSummary = {
   whatFor: string;
@@ -30,10 +31,12 @@ function hasWindow() {
 
 export function getStoredProducts(): BeautyProduct[] {
   if (!hasWindow()) return [];
+  const productsKey = getScopedStorageKeyWithLegacyMigration(PRODUCTS_KEY, ["beautyshelf.products"]);
+  if (!productsKey) return [];
 
-  const raw = window.localStorage.getItem(PRODUCTS_KEY);
+  const raw = window.localStorage.getItem(productsKey);
   if (!raw) {
-    window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify([]));
+    window.localStorage.setItem(productsKey, JSON.stringify([]));
     return [];
   }
 
@@ -47,12 +50,16 @@ export function getStoredProducts(): BeautyProduct[] {
 
 export function saveProducts(products: BeautyProduct[]) {
   if (!hasWindow()) return;
-  window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+  const productsKey = getScopedStorageKey(PRODUCTS_KEY);
+  if (!productsKey) return;
+  window.localStorage.setItem(productsKey, JSON.stringify(products));
 }
 
 export function getRecentViewedProductIds() {
   if (!hasWindow()) return [];
-  const raw = window.localStorage.getItem(RECENT_VIEWED_KEY);
+  const recentViewedKey = getScopedStorageKeyWithLegacyMigration(RECENT_VIEWED_KEY, ["beautyshelf.recent-viewed-products"]);
+  if (!recentViewedKey) return [];
+  const raw = window.localStorage.getItem(recentViewedKey);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as string[];
@@ -64,9 +71,11 @@ export function getRecentViewedProductIds() {
 
 export function markProductViewed(id: string) {
   if (!hasWindow()) return;
+  const recentViewedKey = getScopedStorageKey(RECENT_VIEWED_KEY);
+  if (!recentViewedKey) return;
   const existing = getRecentViewedProductIds().filter((item) => item !== id);
   const next = [id, ...existing].slice(0, 8);
-  window.localStorage.setItem(RECENT_VIEWED_KEY, JSON.stringify(next));
+  window.localStorage.setItem(recentViewedKey, JSON.stringify(next));
 }
 
 export function createProduct(input: Omit<BeautyProduct, "id">) {
@@ -107,8 +116,11 @@ export function deleteProductById(id: string) {
   }
 
   const recent = getRecentViewedProductIds().filter((item) => item !== id);
+  const recentViewedKey = getScopedStorageKey(RECENT_VIEWED_KEY);
   if (hasWindow()) {
-    window.localStorage.setItem(RECENT_VIEWED_KEY, JSON.stringify(recent));
+    if (recentViewedKey) {
+      window.localStorage.setItem(recentViewedKey, JSON.stringify(recent));
+    }
   }
 
   const imageMap = getProductImageMap();
@@ -116,14 +128,19 @@ export function deleteProductById(id: string) {
     const restImages = { ...imageMap };
     delete restImages[id];
     if (hasWindow()) {
-      window.localStorage.setItem(PRODUCT_IMAGES_KEY, JSON.stringify(restImages));
+      const productImagesKey = getScopedStorageKey(PRODUCT_IMAGES_KEY);
+      if (productImagesKey) {
+        window.localStorage.setItem(productImagesKey, JSON.stringify(restImages));
+      }
     }
   }
 }
 
 function getProductImageMap(): Record<string, string> {
   if (!hasWindow()) return {};
-  const raw = window.localStorage.getItem(PRODUCT_IMAGES_KEY);
+  const productImagesKey = getScopedStorageKeyWithLegacyMigration(PRODUCT_IMAGES_KEY, ["beautyshelf.product-images"]);
+  if (!productImagesKey) return {};
+  const raw = window.localStorage.getItem(productImagesKey);
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as Record<string, string>;
@@ -139,9 +156,11 @@ export function getProductImageById(id: string) {
 
 export function saveProductImageById(id: string, imageDataUrl: string) {
   if (!hasWindow()) return;
+  const productImagesKey = getScopedStorageKey(PRODUCT_IMAGES_KEY);
+  if (!productImagesKey) return;
   const all = getProductImageMap();
   const next = { ...all, [id]: imageDataUrl };
-  window.localStorage.setItem(PRODUCT_IMAGES_KEY, JSON.stringify(next));
+  window.localStorage.setItem(productImagesKey, JSON.stringify(next));
 }
 
 export function getSummaryMap(): ProductSummaryMap {
@@ -173,6 +192,11 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
       routineStep: "清洁第一步",
       howOftenToStart: "先每天 1 次，3-5 天后无不适再增加到 2 次。",
     },
+    "toner-mist": {
+      whenToUse: "洁面后使用，帮助补水舒缓并为后续步骤打底。",
+      routineStep: "清洁后打底步骤",
+      howOftenToStart: "可从早晚各 1 次开始，观察是否有刺痛或泛红。",
+    },
     serum: {
       whenToUse: "建议在爽肤后、保湿前使用。",
       routineStep: "功效护理步骤",
@@ -188,14 +212,24 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
       routineStep: "日间防护步骤",
       howOftenToStart: "建议立即建立每日使用习惯。",
     },
-    makeup: {
-      whenToUse: "护肤和防晒完成后使用。",
-      routineStep: "妆面完成步骤",
-      howOftenToStart: "按日常需求使用即可。",
+    mask: {
+      whenToUse: "建议在晚间护肤中使用，放在精华前后按产品说明调整。",
+      routineStep: "周期护理步骤",
+      howOftenToStart: "可从每周 2-3 次开始，避免频繁叠加高活性产品。",
+    },
+    "eye-care": {
+      whenToUse: "建议在精华后、面霜前后使用，轻拍吸收。",
+      routineStep: "眼周护理步骤",
+      howOftenToStart: "可从晚间 1 次开始，稳定后再增加到早晚。",
+    },
+    "targeted-treatment": {
+      whenToUse: "按说明在特定问题区域或特定时段使用。",
+      routineStep: "定向功效步骤",
+      howOftenToStart: "建议低频起步，观察刺激、泛红和干燥反应后再调整。",
     },
   };
 
-  const defaults = categoryDefaults[product.category];
+  const defaults: Partial<ProductSummary> = categoryDefaults[product.category] ?? {};
   const statusGuideMap: Record<BeautyProduct["status"], string> = {
     using: "你已经在使用它，建议保持其它步骤稳定，便于观察真实效果。",
     wishlist: "你还在考虑阶段，建议先确认肤质匹配和预算，再决定是否入手。",
@@ -211,10 +245,13 @@ export function generateMockSummary(product: BeautyProduct): ProductSummary {
 
   const inSimplerTermsMap: Partial<Record<string, string>> = {
     cleanser: "简单说，它的核心价值是把脸清洁干净，同时尽量不过度带走皮肤水分。",
+    "toner-mist": "简单说，它主要用于补水舒缓，帮助后续护肤更稳定。",
     serum: "简单说，它是集中护理步骤，用来针对性改善某个皮肤问题。",
     moisturizer: "简单说，它的作用是锁住水分、降低干燥和紧绷感。",
     sunscreen: "简单说，它是白天最关键的保护步骤，能减少日晒带来的长期损伤。",
-    makeup: "简单说，它用于修饰妆面，前提是底层护肤和防晒已经做好。",
+    mask: "简单说，它是周期护理步骤，适合按节奏补充修护或保湿。",
+    "eye-care": "简单说，它用于眼周护理，重点是温和和持续观察耐受度。",
+    "targeted-treatment": "简单说，它是针对特定问题的功效护理，低频起步更稳妥。",
   };
 
   return {

@@ -1,7 +1,8 @@
 import type { ProductExperience } from "@/lib/product-experience-service";
 import { ProductExperienceRepository } from "@/lib/repositories/product-experience-repository";
+import { getScopedStorageKey, getScopedStorageKeyWithLegacyMigration } from "@/lib/storage-scope";
 
-const PRODUCT_EXPERIENCES_KEY = "beautyshelf.product-experiences";
+const PRODUCT_EXPERIENCES_KEY = "product-experiences";
 
 type ProductExperienceMap = Record<string, ProductExperience>;
 
@@ -11,7 +12,9 @@ function hasWindow() {
 
 function getExperienceMap(): ProductExperienceMap {
   if (!hasWindow()) return {};
-  const raw = window.localStorage.getItem(PRODUCT_EXPERIENCES_KEY);
+  const experiencesKey = getScopedStorageKeyWithLegacyMigration(PRODUCT_EXPERIENCES_KEY, ["beautyshelf.product-experiences"]);
+  if (!experiencesKey) return {};
+  const raw = window.localStorage.getItem(experiencesKey);
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as ProductExperienceMap;
@@ -23,7 +26,9 @@ function getExperienceMap(): ProductExperienceMap {
 
 function saveExperienceMap(map: ProductExperienceMap) {
   if (!hasWindow()) return;
-  window.localStorage.setItem(PRODUCT_EXPERIENCES_KEY, JSON.stringify(map));
+  const experiencesKey = getScopedStorageKey(PRODUCT_EXPERIENCES_KEY);
+  if (!experiencesKey) return;
+  window.localStorage.setItem(experiencesKey, JSON.stringify(map));
 }
 
 export const localProductExperienceRepository: ProductExperienceRepository = {
@@ -35,9 +40,9 @@ export const localProductExperienceRepository: ProductExperienceRepository = {
     const map = getExperienceMap();
     const previous = map[productId];
     const next: ProductExperience = {
-      productId,
       ...(previous || {}),
       ...patch,
+      productId,
       updatedAt: new Date().toISOString(),
     };
     map[productId] = next;

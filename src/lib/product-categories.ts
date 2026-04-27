@@ -1,12 +1,7 @@
 import { mapToTopLevelCategory } from "@/lib/product-taxonomy";
+import { SKINCARE_PRODUCT_CATEGORY_FILTER_OPTIONS } from "@/lib/product-options";
 
-export const PRODUCT_PRIMARY_CATEGORIES = [
-  { id: "all", label: "全部" },
-  { id: "skincare", label: "护肤" },
-  { id: "makeup", label: "美妆" },
-  { id: "body-hair", label: "身体&头发" },
-  { id: "fragrance-other", label: "香氛&其他" },
-] as const;
+export const PRODUCT_PRIMARY_CATEGORIES = SKINCARE_PRODUCT_CATEGORY_FILTER_OPTIONS;
 
 export type ProductPrimaryCategory = typeof PRODUCT_PRIMARY_CATEGORIES[number]["id"];
 

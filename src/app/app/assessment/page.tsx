@@ -117,8 +117,6 @@ export default function AssessmentPage() {
           ? "我有固定的基础护肤流程"
           : "我比较理解功效成分";
 
-    const ingredientsToAvoid = answers.sensitivity === "比较容易" ? "香精、刺激性酒精" : "";
-
     setApplying(true);
     try {
       await saveProfileDraftAsync({
@@ -131,7 +129,6 @@ export default function AssessmentPage() {
               ? "熟练"
               : "入门",
         skincareFamiliarity,
-        ingredientsToAvoid,
       });
 
       queueToast({ tone: "success", message: "测评结果已应用到个人画像草稿。" });

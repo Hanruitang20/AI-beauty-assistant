@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { ProductStatus, SourceType } from "@/lib/products";
+import { SKINCARE_PRODUCT_CATEGORY_OPTIONS } from "@/lib/product-options";
 
 export type ProductFormValues = {
   productName: string;
@@ -94,12 +95,11 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
           }}
         >
           <option value="">请选择品类</option>
-          <option value="cleanser">洁面</option>
-          <option value="serum">精华</option>
-          <option value="moisturizer">面霜/乳液</option>
-          <option value="sunscreen">防晒</option>
-          <option value="makeup">彩妆</option>
-          <option value="other">其他</option>
+          {SKINCARE_PRODUCT_CATEGORY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </Select>
       </label>
       {form.categoryType === "custom" ? (

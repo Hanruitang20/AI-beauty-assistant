@@ -69,6 +69,7 @@ export default function ProfilePage() {
   const profileSensitivity = savedProfile?.sensitivityLevel || "未填写";
   const profileExperience = savedProfile?.experienceLevel || "未填写";
   const journeyPreview = useMemo(() => buildProductJourneyPreview(products, 3), [products]);
+  const shortUserId = (user?.id || "bs_user_mock").slice(0, 10).toUpperCase();
 
   function handleAvatarPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -132,7 +133,7 @@ export default function ProfilePage() {
           <div>
             <h1 className="editorial-heading text-2xl font-semibold text-[#3c3530]">{user?.name || "BeautyShelf 用户"}</h1>
             <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              ID: {user?.id || "bs_user_mock"}
+              ID: {shortUserId}
             </p>
           </div>
         </div>
@@ -263,7 +264,7 @@ export default function ProfilePage() {
         onClick={async () => {
           await signOutAsync();
           queueToast({ tone: "success", message: "你已退出登录。" });
-          router.replace("/auth/sign-in");
+          router.replace("/auth/login");
         }}
       >
         退出登录

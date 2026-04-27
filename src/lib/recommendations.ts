@@ -1,4 +1,4 @@
-import { BeautyProduct, ProductCategory } from "@/lib/products";
+import { BeautyProduct, ProductCategory, getCategoryLabel } from "@/lib/products";
 import { ProductSummary } from "@/lib/products-store";
 
 export type UserGuidanceMode = "beginner" | "curious" | "goal_oriented" | "knowledge_builder";
@@ -44,13 +44,21 @@ export type GuidancePageData = {
   };
 };
 
-const categoryLabelMap: Record<ProductCategory, string> = {
-  cleanser: "洁面",
-  serum: "精华",
-  moisturizer: "面霜/乳液",
-  sunscreen: "防晒",
-  makeup: "彩妆",
-};
+function toProductCategory(category?: string): ProductCategory | undefined {
+  if (!category) return undefined;
+  const knownCategories: ProductCategory[] = [
+    "cleanser",
+    "toner-mist",
+    "serum",
+    "moisturizer",
+    "sunscreen",
+    "mask",
+    "eye-care",
+    "targeted-treatment",
+    "other",
+  ];
+  return knownCategories.includes(category as ProductCategory) ? (category as ProductCategory) : undefined;
+}
 
 function inferMode(profile: UserProfile | null, products: BeautyProduct[]): UserGuidanceMode {
   const level = profile?.experienceLevel || "入门";
@@ -130,7 +138,7 @@ export function buildForYouGuidance(
 
   const firstUsing = usingProducts[0];
   const productBasedDirection = firstUsing
-    ? `你现在有正在使用的${categoryLabelMap[firstUsing.category]}（${firstUsing.name}），建议把它作为观察锚点。`
+    ? `你现在有正在使用的${getCategoryLabel(firstUsing.category)}（${firstUsing.name}），建议把它作为观察锚点。`
     : "你目前没有标记“正在使用”的产品，建议先确定 1 个当前主力产品，便于判断效果。";
 
   const nextStep = priorityGoal
@@ -177,7 +185,7 @@ export function buildForYouGuidance(
         caution_note: disliked.length > 0 ? `你记录过不偏好的品牌：${disliked.slice(0, 2).join("、")}，建议继续回避相似触发点。` : undefined,
         next_best_step: firstUsing ? `围绕 ${firstUsing.name} 做一条“可对比”记录，再加一个新变量。` : "先把下一款准备尝试的产品标记为“想购买”并补充备注。",
         action_label: "去产品库查看记录",
-        suggestedCategory: firstUsing?.category,
+        suggestedCategory: toProductCategory(firstUsing?.category),
       },
       caution: {
         section_title: "当前需要注意的点",

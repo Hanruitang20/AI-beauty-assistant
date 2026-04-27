@@ -261,7 +261,6 @@ export default function ProductDetailPage() {
 
       <ProductExperienceCard
         productId={productId}
-        productCategory={product.category}
         initialExperience={experience}
         onUpdated={setExperience}
       />

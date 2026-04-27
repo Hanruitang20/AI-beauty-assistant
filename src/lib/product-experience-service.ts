@@ -5,6 +5,14 @@ export type ProductUsageFrequency = "daily" | "weekly" | "occasionally" | "not_s
 export type ProductReaction =
   | "none"
   | "no_issue"
+  | "comfortable"
+  | "hydrating"
+  | "absorbs_fast"
+  | "gentle"
+  | "effective"
+  | "clogging_or_breakout"
+  | "stinging_or_redness"
+  | "too_oily_or_heavy"
   | "uncomfortable"
   | "irritating_or_breakout"
   | "dry_or_tight"
@@ -68,9 +76,9 @@ export function saveProductExperience(
   const map = getExperienceMap();
   const previous = map[productId];
   const next: ProductExperience = {
-    productId,
     ...(previous || {}),
     ...patch,
+    productId,
     updatedAt: new Date().toISOString(),
   };
   map[productId] = next;

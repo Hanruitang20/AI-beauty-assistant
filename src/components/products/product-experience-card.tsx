@@ -3,7 +3,6 @@
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
 import { useState } from "react";
-import { getPrimaryCategory } from "@/lib/product-categories";
 import {
   ProductExperience,
   ProductIntention,
@@ -11,6 +10,7 @@ import {
   ProductUsageFrequency,
   saveProductExperienceAsync,
 } from "@/lib/product-experience-service";
+import { SKINCARE_REACTION_OPTIONS } from "@/lib/product-options";
 
 const usageFrequencyOptions: Array<{ value: ProductUsageFrequency; label: string }> = [
   { value: "daily", label: "每天" },
@@ -28,22 +28,19 @@ const intentionOptions: Array<{ value: ProductIntention; label: string }> = [
 
 type ProductExperienceCardProps = {
   productId: string;
-  productCategory: string;
   initialExperience?: ProductExperience | null;
   onUpdated?: (experience: ProductExperience) => void;
 };
 
 export function ProductExperienceCard({
   productId,
-  productCategory,
   initialExperience = null,
   onUpdated,
 }: ProductExperienceCardProps) {
   const { showToast } = useToast();
   const [experience, setExperience] = useState<ProductExperience | null>(initialExperience);
   const [feedbackNoteDraft, setFeedbackNoteDraft] = useState(initialExperience?.feedbackNote || "");
-  const primaryCategory = getPrimaryCategory(productCategory);
-  const feedbackOptions = getFeedbackOptionsByPrimaryCategory(primaryCategory);
+  const feedbackOptions: ReadonlyArray<{ value: ProductReaction; label: string }> = SKINCARE_REACTION_OPTIONS;
 
   async function updateExperience(patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>) {
     const optimistic: ProductExperience = {
@@ -159,7 +156,7 @@ function ExperienceChips<T extends string>({
   onSelect,
 }: {
   title: string;
-  options: Array<{ value: T; label: string }>;
+  options: ReadonlyArray<{ value: T; label: string }>;
   selected?: T;
   onSelect: (value: T) => void;
 }) {
@@ -191,50 +188,3 @@ function ExperienceChips<T extends string>({
   );
 }
 
-function getFeedbackOptionsByPrimaryCategory(primaryCategory: ReturnType<typeof getPrimaryCategory>) {
-  const common: Array<{ value: ProductReaction; label: string }> = [
-    { value: "no_issue", label: "没有明显问题" },
-  ];
-
-  if (primaryCategory === "skincare") {
-    return [
-      ...common,
-      { value: "uncomfortable", label: "有点不舒服" },
-      { value: "irritating_or_breakout", label: "闷痘或刺激" },
-      { value: "dry_or_tight", label: "干燥或紧绷" },
-      { value: "texture_not_ideal", label: "吸收/肤感不理想" },
-      { value: "unsure", label: "不确定" },
-    ];
-  }
-
-  if (primaryCategory === "makeup") {
-    return [
-      ...common,
-      { value: "drying_or_cakey", label: "拔干或卡纹" },
-      { value: "not_smooth_or_pilling", label: "不服帖或搓泥" },
-      { value: "poor_longevity", label: "持久度不理想" },
-      { value: "finish_not_ideal", label: "颜色/妆效不满意" },
-      { value: "unsure", label: "不确定" },
-    ];
-  }
-
-  if (primaryCategory === "body-hair") {
-    return [
-      ...common,
-      { value: "greasy_or_heavy", label: "油腻或厚重" },
-      { value: "dry_or_tight", label: "干燥或紧绷" },
-      { value: "scalp_or_body_discomfort", label: "头皮/身体不适" },
-      { value: "unclear_effect", label: "效果不明显" },
-      { value: "unsure", label: "不确定" },
-    ];
-  }
-
-  return [
-    ...common,
-    { value: "scent_discomfort", label: "味道不适" },
-    { value: "poor_longevity", label: "留香不理想" },
-    { value: "hard_to_use", label: "使用不方便" },
-    { value: "unclear_effect", label: "效果不明显" },
-    { value: "unsure", label: "不确定" },
-  ];
-}

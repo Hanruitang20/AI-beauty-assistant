@@ -1,6 +1,16 @@
 export type ProductStatus = "using" | "wishlist" | "used" | "recommended";
 
-export type ProductCategory = "cleanser" | "serum" | "moisturizer" | "sunscreen" | "makeup";
+export type ProductCategory =
+  | "cleanser"
+  | "toner-mist"
+  | "serum"
+  | "moisturizer"
+  | "sunscreen"
+  | "mask"
+  | "eye-care"
+  | "targeted-treatment"
+  | "other"
+  | "makeup";
 
 export type SourceType = "self-discovery" | "friend" | "creator" | "dermatologist";
 
@@ -26,9 +36,14 @@ export const productStatusLabelMap: Record<ProductStatus, string> = {
 
 export const productCategoryLabelMap: Record<ProductCategory, string> = {
   cleanser: "洁面",
+  "toner-mist": "爽肤水 / 喷雾",
   serum: "精华",
-  moisturizer: "面霜/乳液",
+  moisturizer: "乳液 / 面霜",
   sunscreen: "防晒",
+  mask: "面膜",
+  "eye-care": "眼部护理",
+  "targeted-treatment": "功效护理",
+  other: "其他",
   makeup: "彩妆",
 };
 

@@ -19,8 +19,7 @@ export function hasValidAssessmentDraft(draft: AssessmentProfileDraft | null) {
     draft.skinType?.trim() ||
       draft.skinConcerns?.trim() ||
       draft.experienceLevel?.trim() ||
-      draft.skincareFamiliarity?.trim() ||
-      draft.ingredientsToAvoid?.trim(),
+      draft.skincareFamiliarity?.trim(),
   );
 }
 

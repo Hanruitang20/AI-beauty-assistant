@@ -135,18 +135,6 @@ export default function RecommendationsPage() {
       <div className="space-y-4">
         <h1 className="editorial-heading text-[28px] font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
         <Card className="space-y-3 rounded-[24px]">
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">产品记录概览</h2>
-          <p className="text-sm text-[var(--text-muted)]">已记录 {products.length} 个产品。</p>
-          {recommendationView.scopedExperienceCount > 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              当前分类下已记录 {recommendationView.scopedExperienceCount} 个使用感受，其中 {recommendationView.scopedRatedProductCount} 个已有评分。
-            </p>
-          ) : null}
-          <p className="text-sm text-[var(--text-muted)]">
-            状态分布：正在使用 {recommendationView.statusCount.using || 0} · 想购买 {recommendationView.statusCount.wishlist || 0} · 被推荐 {recommendationView.statusCount.recommended || 0} · 用过 {recommendationView.statusCount.used || 0}
-          </p>
-        </Card>
-        <Card className="space-y-3 rounded-[24px]">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
             <button
@@ -186,20 +174,6 @@ export default function RecommendationsPage() {
           {(recommendationView.profileSummary.length ? recommendationView.profileSummary : ["你已完成基础画像，可继续补充更细字段。"]).map((line) => (
             <p key={line}>· {line}</p>
           ))}
-        </div>
-      </Card>
-
-      <Card className="space-y-3 rounded-[24px]">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">产品记录概览</h2>
-        <div className="grid gap-2 text-sm text-[var(--text-muted)]">
-          <p>已记录 {products.length} 个产品。</p>
-          {recommendationView.scopedExperienceCount > 0 ? (
-            <p>
-              当前分类下已记录 {recommendationView.scopedExperienceCount} 个使用感受，其中 {recommendationView.scopedRatedProductCount} 个已有评分。
-            </p>
-          ) : null}
-          <p>当前主要集中在：{recommendationView.topCategoryLabel}。</p>
-          <p>状态分布：正在使用 {recommendationView.statusCount.using || 0} · 想购买 {recommendationView.statusCount.wishlist || 0} · 被推荐 {recommendationView.statusCount.recommended || 0} · 用过 {recommendationView.statusCount.used || 0}</p>
         </div>
       </Card>
 
