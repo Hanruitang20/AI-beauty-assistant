@@ -27,6 +27,9 @@ export default function NewProductPage() {
 
   async function handleCreate(form: ProductFormValues) {
     const normalizedCategory = form.categoryType === "custom" ? form.customCategory.trim() : form.category;
+    if (!form.sourceType || !form.status) {
+      throw new Error("Required product fields are missing.");
+    }
     try {
       const created = await createProductAsync({
         name: form.productName,

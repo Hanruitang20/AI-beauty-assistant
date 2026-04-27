@@ -42,10 +42,11 @@ export default function SignInPage() {
       await signInAsync({
         name: form.email.split("@")[0] || "BeautyShelf 用户",
         email: form.email,
+        password: form.password,
         id: `bs_user_${Date.now().toString().slice(-6)}`,
       });
       setLoading(false);
-      router.replace("/app/onboarding");
+      router.replace("/app/products");
     } catch {
       setError("登录失败，请稍后重试。");
       setLoading(false);

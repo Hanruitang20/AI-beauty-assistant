@@ -29,7 +29,22 @@ const dataSourceByMode: Record<DataSourceMode, DataSource> = {
 
 export const DEFAULT_DATA_SOURCE_MODE: DataSourceMode = "local";
 
-export const dataSource = dataSourceByMode[DEFAULT_DATA_SOURCE_MODE];
+function resolveDataSourceMode(): DataSourceMode {
+  return process.env.NEXT_PUBLIC_DATA_SOURCE === "remote" ? "remote" : "local";
+}
+
+export const AUTH_DATA_SOURCE_MODE: DataSourceMode = resolveDataSourceMode();
+
+if (process.env.NODE_ENV === "development") {
+  // Development visibility for source switching.
+  console.info("[DataSource] NEXT_PUBLIC_DATA_SOURCE =", process.env.NEXT_PUBLIC_DATA_SOURCE || "local");
+  console.info("[DataSource] auth source =", AUTH_DATA_SOURCE_MODE);
+}
+
+export const dataSource: DataSource = {
+  ...dataSourceByMode[DEFAULT_DATA_SOURCE_MODE],
+  auth: dataSourceByMode[AUTH_DATA_SOURCE_MODE].auth,
+};
 
 export function getDataSource(mode: DataSourceMode = DEFAULT_DATA_SOURCE_MODE) {
   return dataSourceByMode[mode];

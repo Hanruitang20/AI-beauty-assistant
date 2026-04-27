@@ -20,6 +20,14 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function getErrorCode(error: unknown) {
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const code = (error as { code?: string }).code;
+      if (typeof code === "string" && code) return code;
+    }
+    return "unknown";
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -40,12 +48,13 @@ export default function SignUpPage() {
       await signUpAsync({
         name: form.name || "BeautyShelf 用户",
         email: form.email,
+        password: form.password,
         id: `bs_user_${Date.now().toString().slice(-6)}`,
       });
       setLoading(false);
-      router.replace("/app/onboarding");
-    } catch {
-      setError("创建失败，请稍后重试。");
+      router.replace("/app/products");
+    } catch (error) {
+      setError(`创建失败：${getErrorCode(error)}`);
       setLoading(false);
     }
   }

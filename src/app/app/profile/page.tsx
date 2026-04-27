@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getProfileAsync, getUserAvatarAsync, saveUserAvatarAsync } from "@/lib/profile-service";
-import { signOutMock } from "@/lib/mock-auth";
+import { signOutAsync } from "@/lib/auth-service";
 import { BeautyProduct, getCategoryLabel } from "@/lib/products";
 import { queueToast } from "@/lib/flash-toast";
 import { useToast } from "@/components/ui/toast-provider";
@@ -260,8 +260,8 @@ export default function ProfilePage() {
       <Button
         variant="secondary"
         className="w-full"
-        onClick={() => {
-          signOutMock();
+        onClick={async () => {
+          await signOutAsync();
           queueToast({ tone: "success", message: "你已退出登录。" });
           router.replace("/auth/sign-in");
         }}

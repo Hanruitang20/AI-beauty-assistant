@@ -15,13 +15,19 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     async function checkAuth() {
-      const signedIn = await isSignedInAsync();
-      if (!active) return;
-      if (signedIn) {
-        router.replace("/app/products");
-        return;
+      try {
+        const signedIn = await isSignedInAsync();
+        if (!active) return;
+        if (signedIn) {
+          router.replace("/app/products");
+          return;
+        }
+        setReady(true);
+      } catch {
+        if (!active) return;
+        // If auth check fails, allow auth pages to render instead of white screen.
+        setReady(true);
       }
-      setReady(true);
     }
     void checkAuth();
     return () => {

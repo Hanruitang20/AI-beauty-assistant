@@ -94,6 +94,9 @@ export default function EditProductPage() {
 
   async function handleUpdate(values: ProductFormValues) {
     const normalizedCategory = values.categoryType === "custom" ? values.customCategory.trim() : values.category;
+    if (!values.sourceType || !values.status) {
+      throw new Error("Required product fields are missing.");
+    }
     try {
       await updateProductAsync(params.id, {
         name: values.productName,

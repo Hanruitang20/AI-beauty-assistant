@@ -1,14 +1,19 @@
-import { dataSource } from "@/lib/data-source";
+import { AUTH_DATA_SOURCE_MODE, dataSource } from "@/lib/data-source";
+import { localAuthRepository } from "@/lib/local/local-auth-repository";
 import { getMockUser, isSignedIn as isSignedInMock, MockUser, signInMock, signOutMock } from "@/lib/mock-auth";
 
-export type AuthUser = MockUser;
+export type AuthUser = MockUser & { password?: string };
 
 export function signIn(user: AuthUser) {
   signInMock(user);
 }
 
 export async function signInAsync(user: AuthUser) {
-  await dataSource.auth.signIn(user);
+  if (AUTH_DATA_SOURCE_MODE === "remote") {
+    await dataSource.auth.signIn(user);
+    return;
+  }
+  await localAuthRepository.signIn(user);
 }
 
 export function signUp(user: AuthUser) {
@@ -17,7 +22,11 @@ export function signUp(user: AuthUser) {
 }
 
 export async function signUpAsync(user: AuthUser) {
-  await dataSource.auth.signUp(user);
+  if (AUTH_DATA_SOURCE_MODE === "remote") {
+    await dataSource.auth.signUp(user);
+    return;
+  }
+  await localAuthRepository.signUp(user);
 }
 
 export function signOut() {
@@ -25,7 +34,11 @@ export function signOut() {
 }
 
 export async function signOutAsync() {
-  await dataSource.auth.signOut();
+  if (AUTH_DATA_SOURCE_MODE === "remote") {
+    await dataSource.auth.signOut();
+    return;
+  }
+  await localAuthRepository.signOut();
 }
 
 export function getCurrentUser() {
@@ -33,7 +46,10 @@ export function getCurrentUser() {
 }
 
 export async function getCurrentUserAsync() {
-  return dataSource.auth.getCurrentUser();
+  if (AUTH_DATA_SOURCE_MODE === "remote") {
+    return dataSource.auth.getCurrentUser();
+  }
+  return localAuthRepository.getCurrentUser();
 }
 
 export function isSignedIn() {
@@ -41,5 +57,8 @@ export function isSignedIn() {
 }
 
 export async function isSignedInAsync() {
-  return dataSource.auth.isSignedIn();
+  if (AUTH_DATA_SOURCE_MODE === "remote") {
+    return dataSource.auth.isSignedIn();
+  }
+  return localAuthRepository.isSignedIn();
 }

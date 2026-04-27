@@ -14,13 +14,18 @@ export default function InternalAppLayout({ children }: { children: ReactNode })
   useEffect(() => {
     let active = true;
     async function checkAuth() {
-      const signedIn = await isSignedInAsync();
-      if (!active) return;
-      if (!signedIn) {
+      try {
+        const signedIn = await isSignedInAsync();
+        if (!active) return;
+        if (!signedIn) {
+          router.replace("/auth/sign-in");
+          return;
+        }
+        setReady(true);
+      } catch {
+        if (!active) return;
         router.replace("/auth/sign-in");
-        return;
       }
-      setReady(true);
     }
     void checkAuth();
     return () => {
