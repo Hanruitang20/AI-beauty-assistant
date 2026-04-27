@@ -1,3 +1,5 @@
+import { dataSource } from "@/lib/data-source";
+
 export type ProductRating = 1 | 2 | 3 | 4 | 5;
 export type ProductUsageFrequency = "daily" | "weekly" | "occasionally" | "not_started";
 export type ProductReaction =
@@ -28,6 +30,7 @@ export type ProductExperience = {
   feedbackNote?: string;
   updatedAt: string;
 };
+export type ProductExperiencePatch = Partial<Omit<ProductExperience, "productId" | "updatedAt">>;
 
 const PRODUCT_EXPERIENCES_KEY = "beautyshelf.product-experiences";
 
@@ -60,7 +63,7 @@ export function getProductExperience(productId: string) {
 
 export function saveProductExperience(
   productId: string,
-  patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>,
+  patch: ProductExperiencePatch,
 ) {
   const map = getExperienceMap();
   const previous = map[productId];
@@ -73,6 +76,26 @@ export function saveProductExperience(
   map[productId] = next;
   saveExperienceMap(map);
   return next;
+}
+
+export async function getProductExperienceAsync(productId: string) {
+  return dataSource.experiences.getByProductId(productId);
+}
+
+export async function saveProductExperienceAsync(productId: string, patch: ProductExperiencePatch) {
+  return dataSource.experiences.saveByProductId(productId, patch);
+}
+
+export async function deleteProductExperienceAsync(productId: string) {
+  await dataSource.experiences.deleteByProductId(productId);
+}
+
+export async function getAllProductExperiencesAsync() {
+  return dataSource.experiences.getAll();
+}
+
+export async function getExperiencesByProductIdsAsync(productIds: string[]) {
+  return dataSource.experiences.getByProductIds(productIds);
 }
 
 export function deleteProductExperience(productId: string) {

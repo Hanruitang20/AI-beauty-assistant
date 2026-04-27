@@ -1,12 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
-import { clearProfileDraft, getProfileDraft } from "@/lib/profile-draft";
-import { getSavedProfile, saveProfile, SavedProfile } from "@/lib/profile-store";
+import {
+  clearProfileDraftAsync,
+  getProfileAsync,
+  getProfileDraftAsync,
+  saveProfileAsync,
+} from "@/lib/profile-service";
+import { SavedProfile } from "@/lib/profile-store";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -30,26 +35,55 @@ export function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
-  const savedProfile = getSavedProfile();
-  const draft = searchParams.get("source") === "assessment" ? getProfileDraft() : null;
+  const sourceFromAssessment = searchParams.get("source") === "assessment";
 
-  const initialFormState: ProfileFormState = draft
-    ? {
-        ...initialForm,
-        skinType: draft.skinType || "",
-        mainConcerns: draft.skinConcerns || "",
-        experienceLevel: draft.experienceLevel || "",
-        skincareFamiliarity: draft.skincareFamiliarity || "",
-        ingredientsToAvoid: draft.ingredientsToAvoid || "",
-      }
-    : savedProfile
-      ? { ...initialForm, ...savedProfile }
-      : initialForm;
-
-  const [form, setForm] = useState<ProfileFormState>(initialFormState);
-  const [prefilledFromAssessment, setPrefilledFromAssessment] = useState(Boolean(draft));
-  const [loadedFromSavedProfile, setLoadedFromSavedProfile] = useState(Boolean(savedProfile && !draft));
+  const [form, setForm] = useState<ProfileFormState>(initialForm);
+  const [prefilledFromAssessment, setPrefilledFromAssessment] = useState(false);
+  const [loadedFromSavedProfile, setLoadedFromSavedProfile] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInitialData() {
+      setInitializing(true);
+      setLoadError(null);
+      try {
+        const [savedProfile, draft] = await Promise.all([getProfileAsync(), getProfileDraftAsync()]);
+        if (!active) return;
+
+        const shouldUseDraft = sourceFromAssessment && Boolean(draft);
+        const nextFormState: ProfileFormState = shouldUseDraft
+          ? {
+              ...initialForm,
+              skinType: draft?.skinType || "",
+              mainConcerns: draft?.skinConcerns || "",
+              experienceLevel: draft?.experienceLevel || "",
+              skincareFamiliarity: draft?.skincareFamiliarity || "",
+              ingredientsToAvoid: draft?.ingredientsToAvoid || "",
+            }
+          : savedProfile
+            ? { ...initialForm, ...savedProfile }
+            : initialForm;
+
+        setForm(nextFormState);
+        setPrefilledFromAssessment(shouldUseDraft);
+        setLoadedFromSavedProfile(Boolean(savedProfile && !shouldUseDraft));
+      } catch {
+        if (!active) return;
+        setLoadError("个人档案加载失败，请稍后重试。");
+      } finally {
+        if (active) setInitializing(false);
+      }
+    }
+
+    loadInitialData();
+    return () => {
+      active = false;
+    };
+  }, [sourceFromAssessment]);
 
   function resolveReturnToPath() {
     const fallbackPath = "/app/products";
@@ -61,15 +95,21 @@ export function ProfileForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    saveProfile(form);
-    setSaving(false);
-    clearProfileDraft();
-    setPrefilledFromAssessment(false);
-    setLoadedFromSavedProfile(true);
-    showToast({ tone: "success", message: "个人画像已保存到本地。" });
-    router.push(resolveReturnToPath());
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      await saveProfileAsync(form);
+      await clearProfileDraftAsync();
+      setPrefilledFromAssessment(false);
+      setLoadedFromSavedProfile(true);
+      showToast({ tone: "success", message: "个人画像已保存到本地。" });
+      router.push(resolveReturnToPath());
+    } catch {
+      showToast({ tone: "error", message: "保存失败，请稍后重试。" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -80,6 +120,16 @@ export function ProfileForm() {
       </div>
 
       <Card className="rounded-[24px]">
+        {initializing ? (
+          <div className="pb-2">
+            <FeedbackState tone="info">数据加载中...</FeedbackState>
+          </div>
+        ) : null}
+        {loadError ? (
+          <div className="pb-2">
+            <FeedbackState>{loadError}</FeedbackState>
+          </div>
+        ) : null}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             {prefilledFromAssessment ? (
@@ -193,7 +243,7 @@ export function ProfileForm() {
           </label>
 
           <div className="sticky bottom-24 z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
-            <Button className="w-full" type="submit" disabled={saving}>
+            <Button className="w-full" type="submit" disabled={saving || initializing}>
               {saving ? "保存中..." : "保存个人画像"}
             </Button>
           </div>

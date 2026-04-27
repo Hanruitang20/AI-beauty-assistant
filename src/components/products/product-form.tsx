@@ -32,6 +32,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     setError(null);
 
     if (!form.productName || !form.brand || !form.category || !form.sourceType || !form.status || form.usageDurationMonths === "") {
@@ -45,12 +46,16 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
     }
 
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    await onSubmit(form);
-    setSaving(false);
-
-    if (mode === "create") {
-      setForm(initialValues);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      await onSubmit(form);
+      if (mode === "create") {
+        setForm(initialValues);
+      }
+    } catch {
+      setError("保存失败，请稍后重试。");
+    } finally {
+      setSaving(false);
     }
   }
 

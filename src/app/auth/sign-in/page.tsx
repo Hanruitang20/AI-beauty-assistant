@@ -6,7 +6,7 @@ import { FormEvent, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signInMock } from "@/lib/mock-auth";
+import { signInAsync } from "@/lib/auth-service";
 
 type SignInState = {
   email: string;
@@ -38,13 +38,18 @@ export default function SignInPage() {
       return;
     }
 
-    signInMock({
-      name: form.email.split("@")[0] || "BeautyShelf 用户",
-      email: form.email,
-      id: `bs_user_${Date.now().toString().slice(-6)}`,
-    });
-    setLoading(false);
-    router.replace("/app/onboarding");
+    try {
+      await signInAsync({
+        name: form.email.split("@")[0] || "BeautyShelf 用户",
+        email: form.email,
+        id: `bs_user_${Date.now().toString().slice(-6)}`,
+      });
+      setLoading(false);
+      router.replace("/app/onboarding");
+    } catch {
+      setError("登录失败，请稍后重试。");
+      setLoading(false);
+    }
   }
 
   return (

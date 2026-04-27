@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,26 +12,28 @@ import {
   sourceTypeLabelMap,
 } from "@/lib/products";
 import {
-  deleteProductById,
-  generateMockSummary,
-  getProductById,
-  getSummaryByProductId,
   getProductImageById,
-  ProductSummary,
-  saveSummaryByProductId,
   saveProductImageById,
-  markProductViewed,
 } from "@/lib/products-store";
+import { ProductSummary } from "@/lib/products-store";
 import { ProductSummaryPanel } from "@/components/products/product-summary-panel";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { useToast } from "@/components/ui/toast-provider";
 import { appendReturnTo, getSafeReturnTo } from "@/lib/navigation";
 import {
-  deleteProductExperience,
-  getProductExperience,
+  deleteProductExperienceAsync,
+  getProductExperienceAsync,
   ProductExperience,
 } from "@/lib/product-experience-service";
 import { ProductExperienceCard } from "@/components/products/product-experience-card";
+import {
+  deleteProductAsync,
+  generateMockProductSummaryAsync,
+  getProductByIdAsync,
+  getProductSummaryAsync,
+  markProductViewedAsync,
+  saveProductSummaryAsync,
+} from "@/lib/product-service";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -39,13 +41,16 @@ export default function ProductDetailPage() {
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const productId = params.id;
-  const product = useMemo<BeautyProduct | null>(() => getProductById(productId), [productId]);
-  const [summary, setSummary] = useState<ProductSummary | null>(() => getSummaryByProductId(productId));
+  const [product, setProduct] = useState<BeautyProduct | null>(null);
+  const [summary, setSummary] = useState<ProductSummary | null>(null);
   const [productImage, setProductImage] = useState<string>(() => getProductImageById(productId));
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryStatusText, setSummaryStatusText] = useState<string | null>(null);
-  const [experience, setExperience] = useState<ProductExperience | null>(() => getProductExperience(productId));
+  const [experience, setExperience] = useState<ProductExperience | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const safeReturnTo = getSafeReturnTo(searchParams.get("returnTo"), "");
@@ -75,30 +80,77 @@ export default function ProductDetailPage() {
   }
 
   useEffect(() => {
+    let active = true;
+    async function loadData() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [nextProduct, nextSummary, nextExperience] = await Promise.all([
+          getProductByIdAsync(productId),
+          getProductSummaryAsync(productId),
+          getProductExperienceAsync(productId),
+        ]);
+        if (!active) return;
+        setProduct(nextProduct);
+        setSummary(nextSummary);
+        setExperience(nextExperience);
+      } catch {
+        if (!active) return;
+        setLoadError("产品数据加载失败，请稍后重试。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void loadData();
+    return () => {
+      active = false;
+    };
+  }, [productId]);
+
+  useEffect(() => {
     if (product) {
-      markProductViewed(product.id);
+      void markProductViewedAsync(product.id).catch(() => {
+        // Non-blocking side effect for recent viewed.
+      });
     }
   }, [product]);
 
   async function handleGenerateSummary() {
     if (!product) return;
+    if (loadingSummary) return;
     setLoadingSummary(true);
     setSummaryStatusText("正在整理产品信息，请稍候...");
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    const generated = generateMockSummary(product);
-    saveSummaryByProductId(product.id, generated);
-    setSummary(generated);
-    setLoadingSummary(false);
-    setSummaryStatusText("摘要已更新，你可以继续刷新以查看不同角度的说明。");
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const generated = await generateMockProductSummaryAsync(product);
+      await saveProductSummaryAsync(product.id, generated);
+      setSummary(generated);
+      setSummaryStatusText("摘要已更新，你可以继续刷新以查看不同角度的说明。");
+    } catch {
+      showToast({ tone: "error", message: "摘要生成失败，请稍后重试。" });
+      setSummaryStatusText("摘要生成失败，请稍后重试。");
+    } finally {
+      setLoadingSummary(false);
+    }
   }
 
-  function handleConfirmDelete() {
+  async function handleConfirmDelete() {
     if (!product) return;
-    deleteProductById(product.id);
-    deleteProductExperience(product.id);
-    showToast({ tone: "success", message: `已删除「${product.name}」` });
-    setShowDeleteDialog(false);
-    navigateAfterDelete();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await Promise.all([
+        deleteProductAsync(product.id),
+        deleteProductExperienceAsync(product.id),
+      ]);
+      showToast({ tone: "success", message: `已删除「${product.name}」` });
+      setShowDeleteDialog(false);
+      navigateAfterDelete();
+    } catch {
+      showToast({ tone: "error", message: "删除失败，请稍后重试。" });
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function handleImagePick(event: ChangeEvent<HTMLInputElement>) {
@@ -117,6 +169,23 @@ export default function ProductDetailPage() {
       showToast({ tone: "success", message: "产品图片已更新。" });
     };
     reader.readAsDataURL(file);
+  }
+
+  if (loading) {
+    return (
+      <Card className="space-y-4">
+        <FeedbackState>数据加载中...</FeedbackState>
+      </Card>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Card className="space-y-4">
+        <FeedbackState>{loadError}</FeedbackState>
+        <Button onClick={handleBackToPrevious}>返回上一级</Button>
+      </Card>
+    );
   }
 
   if (!product) {
@@ -225,8 +294,8 @@ export default function ProductDetailPage() {
               <Button variant="secondary" className="w-full" onClick={() => setShowDeleteDialog(false)}>
                 取消
               </Button>
-              <Button variant="danger" className="w-full" onClick={handleConfirmDelete}>
-                确认删除
+              <Button variant="danger" className="w-full" onClick={handleConfirmDelete} disabled={deleting}>
+                {deleting ? "删除中..." : "确认删除"}
               </Button>
             </div>
           </div>

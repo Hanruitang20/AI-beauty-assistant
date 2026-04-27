@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { saveProfileDraft } from "@/lib/profile-draft";
+import { saveProfileDraftAsync } from "@/lib/profile-service";
 import { queueToast } from "@/lib/flash-toast";
 
 type Question = {
@@ -55,6 +55,7 @@ export default function AssessmentPage() {
   const [answers, setAnswers] = useState<Answers>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   const currentQuestion = questions[currentIndex];
   const isLastQuestion = currentIndex === questions.length - 1;
@@ -105,8 +106,9 @@ export default function AssessmentPage() {
     setCurrentIndex((prev) => prev - 1);
   }
 
-  function handleApplyToProfile() {
+  async function handleApplyToProfile() {
     if (!summary) return;
+    if (applying) return;
 
     const skincareFamiliarity =
       summary.experienceLevel === "刚入门"
@@ -117,22 +119,29 @@ export default function AssessmentPage() {
 
     const ingredientsToAvoid = answers.sensitivity === "比较容易" ? "香精、刺激性酒精" : "";
 
-    saveProfileDraft({
-      skinType: summary.skinType,
-      skinConcerns: summary.primaryConcerns.join(", "),
-      experienceLevel:
-        summary.experienceLevel === "有一点经验"
-          ? "进阶"
-          : summary.experienceLevel === "比较熟悉"
-            ? "熟练"
-            : "入门",
-      skincareFamiliarity,
-      ingredientsToAvoid,
-    });
+    setApplying(true);
+    try {
+      await saveProfileDraftAsync({
+        skinType: summary.skinType,
+        skinConcerns: summary.primaryConcerns.join(", "),
+        experienceLevel:
+          summary.experienceLevel === "有一点经验"
+            ? "进阶"
+            : summary.experienceLevel === "比较熟悉"
+              ? "熟练"
+              : "入门",
+        skincareFamiliarity,
+        ingredientsToAvoid,
+      });
 
-    queueToast({ tone: "success", message: "测评结果已应用到个人画像草稿。" });
-    const returnTo = searchParams.get("returnTo") || "/app/products";
-    router.push(`/app/profile/edit?source=assessment&returnTo=${encodeURIComponent(returnTo)}`);
+      queueToast({ tone: "success", message: "测评结果已应用到个人画像草稿。" });
+      const returnTo = searchParams.get("returnTo") || "/app/products";
+      router.push(`/app/profile/edit?source=assessment&returnTo=${encodeURIComponent(returnTo)}`);
+    } catch {
+      queueToast({ tone: "error", message: "保存失败，请稍后重试。" });
+    } finally {
+      setApplying(false);
+    }
   }
 
   return (
@@ -206,7 +215,9 @@ export default function AssessmentPage() {
             </div>
           </div>
           <div className="grid gap-2">
-            <Button className="w-full" onClick={handleApplyToProfile}>一键应用到档案</Button>
+            <Button className="w-full" onClick={handleApplyToProfile} disabled={applying}>
+              {applying ? "应用中..." : "一键应用到档案"}
+            </Button>
             <Link href="/app/profile/edit">
               <Button variant="secondary" className="w-full">改为手动编辑档案</Button>
             </Link>

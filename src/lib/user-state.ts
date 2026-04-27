@@ -24,6 +24,60 @@ export function hasValidAssessmentDraft(draft: AssessmentProfileDraft | null) {
   );
 }
 
+const PROFILE_EXCLUDED_KEYS = new Set([
+  "id",
+  "userId",
+  "createdAt",
+  "updatedAt",
+  "metadata",
+  "avatar",
+  "name",
+  "email",
+]);
+
+const INVALID_STRING_VALUES = new Set([
+  "",
+  "未填写",
+  "unknown",
+  "none",
+  "unset",
+  "not_set",
+]);
+
+function isValidStringValue(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return false;
+  const normalizedLower = normalized.toLowerCase();
+  return !INVALID_STRING_VALUES.has(normalizedLower) && !INVALID_STRING_VALUES.has(normalized);
+}
+
+function countValidProfileFields(value: unknown, currentKey?: string): number {
+  if (currentKey && PROFILE_EXCLUDED_KEYS.has(currentKey)) return 0;
+  if (value == null) return 0;
+
+  if (typeof value === "string") {
+    return isValidStringValue(value) ? 1 : 0;
+  }
+
+  if (Array.isArray(value)) {
+    const hasAnyValidItem = value.some((item) => countValidProfileFields(item) > 0);
+    return hasAnyValidItem ? 1 : 0;
+  }
+
+  if (typeof value === "boolean") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? 1 : 0;
+  if (typeof value !== "object") return 0;
+
+  return Object.entries(value as Record<string, unknown>).reduce((acc, [key, childValue]) => {
+    if (PROFILE_EXCLUDED_KEYS.has(key)) return acc;
+    return acc + countValidProfileFields(childValue, key);
+  }, 0);
+}
+
+export function hasValidProfile(profile: SavedProfile | null) {
+  return countValidProfileFields(profile) >= 2;
+}
+
 export function deriveUserAppState(input: {
   isSignedIn: boolean;
   products: BeautyProduct[];
@@ -31,7 +85,7 @@ export function deriveUserAppState(input: {
   assessmentDraft: AssessmentProfileDraft | null;
 }): UserAppState {
   const productCount = input.products.length;
-  const hasProfile = Boolean(input.profile);
+  const hasProfile = hasValidProfile(input.profile);
   const hasAssessmentDraft = hasValidAssessmentDraft(input.assessmentDraft);
 
   return {

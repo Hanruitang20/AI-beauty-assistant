@@ -1,34 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getProfile, getUserAvatar, saveUserAvatar } from "@/lib/profile-service";
-import { getMockUser, signOutMock } from "@/lib/mock-auth";
-import { getStoredProducts } from "@/lib/products-store";
-import { getCategoryLabel } from "@/lib/products";
+import { getProfileAsync, getUserAvatarAsync, saveUserAvatarAsync } from "@/lib/profile-service";
+import { signOutMock } from "@/lib/mock-auth";
+import { BeautyProduct, getCategoryLabel } from "@/lib/products";
 import { queueToast } from "@/lib/flash-toast";
 import { useToast } from "@/components/ui/toast-provider";
 import { buildProductJourneyPreview } from "@/lib/product-journey";
 import { appendReturnTo } from "@/lib/navigation";
-import { getExperiencesByProductIds } from "@/lib/product-experience-service";
+import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
+import { getProductsAsync } from "@/lib/product-service";
+import { getCurrentUserAsync } from "@/lib/auth-service";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const user = getMockUser();
-  const products = getStoredProducts();
-  const savedProfile = getProfile();
-  const [avatar, setAvatar] = useState(() => getUserAvatar());
+  const [user, setUser] = useState<Awaited<ReturnType<typeof getCurrentUserAsync>>>(null);
+  const [products, setProducts] = useState<BeautyProduct[]>([]);
+  const [savedProfile, setSavedProfile] = useState<Awaited<ReturnType<typeof getProfileAsync>>>(null);
+  const [avatar, setAvatar] = useState("");
+  const [journeyExperiences, setJourneyExperiences] = useState<Record<string, ProductExperience>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [nextUser, nextProducts, nextProfile, nextAvatar] = await Promise.all([
+          getCurrentUserAsync(),
+          getProductsAsync(),
+          getProfileAsync(),
+          getUserAvatarAsync(),
+        ]);
+        if (!active) return;
+        setUser(nextUser);
+        setProducts(nextProducts);
+        setSavedProfile(nextProfile);
+        setAvatar(nextAvatar);
+
+        const preview = buildProductJourneyPreview(nextProducts, 3);
+        const nextExperiences = await getExperiencesByProductIdsAsync(preview.items.map((item) => item.id));
+        if (!active) return;
+        setJourneyExperiences(nextExperiences);
+      } catch {
+        if (!active) return;
+        setError("个人页数据加载失败，请稍后重试。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
   const profileMainConcerns = savedProfile?.mainConcerns || "未填写";
   const profileSkinType = savedProfile?.skinType || "未填写";
   const profileSensitivity = savedProfile?.sensitivityLevel || "未填写";
   const profileExperience = savedProfile?.experienceLevel || "未填写";
   const journeyPreview = useMemo(() => buildProductJourneyPreview(products, 3), [products]);
-  const journeyExperiences = getExperiencesByProductIds(journeyPreview.items.map((item) => item.id));
 
   function handleAvatarPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -42,10 +82,26 @@ export default function ProfilePage() {
       const dataUrl = typeof reader.result === "string" ? reader.result : "";
       if (!dataUrl) return;
       setAvatar(dataUrl);
-      saveUserAvatar(dataUrl);
+      void saveUserAvatarAsync(dataUrl);
       showToast({ tone: "success", message: "头像已更新。" });
     };
     reader.readAsDataURL(file);
+  }
+
+  if (loading) {
+    return (
+      <Card className="rounded-[24px]">
+        <p className="text-sm text-[var(--text-muted)]">数据加载中...</p>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="rounded-[24px]">
+        <p className="text-sm text-[var(--text-muted)]">{error}</p>
+      </Card>
+    );
   }
 
   return (

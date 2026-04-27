@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { BeautyProduct, ProductCategory, productCategoryLabelMap, productStatusLabelMap } from "@/lib/products";
-import { getStoredProducts } from "@/lib/products-store";
+import { getProductsAsync } from "@/lib/product-service";
 
 const categoryTabs: Array<{ key: ProductCategory; label: string }> = [
   { key: "cleanser", label: "洁面" },
@@ -15,8 +15,32 @@ const categoryTabs: Array<{ key: ProductCategory; label: string }> = [
 ];
 
 export default function ProductCategoriesPage() {
-  const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
+  const [items, setItems] = useState<BeautyProduct[]>([]);
   const [activeCategory, setActiveCategory] = useState<ProductCategory>("cleanser");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const nextItems = await getProductsAsync();
+        if (!active) return;
+        setItems(nextItems);
+      } catch {
+        if (!active) return;
+        setError("产品数据加载失败，请稍后重试。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const grouped = useMemo(() => {
     return items.filter((item) => item.category === activeCategory);
@@ -51,7 +75,11 @@ export default function ProductCategoriesPage() {
         <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
           {productCategoryLabelMap[activeCategory]}
         </h3>
-        {grouped.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-[var(--text-muted)]">数据加载中...</p>
+        ) : error ? (
+          <p className="text-sm text-[var(--text-muted)]">{error}</p>
+        ) : grouped.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)]">这个分类下还没有产品。</p>
         ) : (
           <div className="grid gap-3">

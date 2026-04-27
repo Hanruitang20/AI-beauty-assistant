@@ -1,25 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getStoredProducts } from "@/lib/products-store";
-import { getSavedProfile } from "@/lib/profile-store";
+import { getProductsAsync } from "@/lib/product-service";
+import { getProfileAsync } from "@/lib/profile-service";
+import { hasValidProfile } from "@/lib/user-state";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const hasProfile = Boolean(getSavedProfile());
-  const hasProducts = getStoredProducts().length > 0;
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (hasProfile || hasProducts) {
-      router.replace("/app/products");
+    let active = true;
+    async function resolveOnboardingState() {
+      try {
+        const [products, profile] = await Promise.all([getProductsAsync(), getProfileAsync()]);
+        if (!active) return;
+        const hasProducts = products.length > 0;
+        const hasProfile = hasValidProfile(profile);
+        if (hasProfile || hasProducts) {
+          router.replace("/app/products");
+          return;
+        }
+        setReady(true);
+      } catch {
+        if (!active) return;
+        setError("数据加载失败，请稍后重试。");
+        setReady(true);
+      }
     }
-  }, [hasProducts, hasProfile, router]);
+    void resolveOnboardingState();
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
-  if (hasProfile || hasProducts) return null;
+  if (!ready) return <div className="sr-only">加载中...</div>;
+
+  if (error) {
+    return (
+      <Card className="space-y-4">
+        <p className="text-sm text-[var(--text-muted)]">{error}</p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-5">

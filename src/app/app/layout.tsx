@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
 import { ToastProvider } from "@/components/ui/toast-provider";
-import { isSignedIn } from "@/lib/mock-auth";
+import { isSignedInAsync } from "@/lib/auth-service";
 
 export default function InternalAppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -12,15 +12,23 @@ export default function InternalAppLayout({ children }: { children: ReactNode })
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn()) {
-      router.replace("/auth/sign-in");
-      return;
+    let active = true;
+    async function checkAuth() {
+      const signedIn = await isSignedInAsync();
+      if (!active) return;
+      if (!signedIn) {
+        router.replace("/auth/sign-in");
+        return;
+      }
+      setReady(true);
     }
-    const readyTimer = window.setTimeout(() => setReady(true), 0);
-    return () => window.clearTimeout(readyTimer);
+    void checkAuth();
+    return () => {
+      active = false;
+    };
   }, [router, pathname]);
 
-  if (!ready) return null;
+  if (!ready) return <div className="sr-only">加载中...</div>;
 
   return (
     <ToastProvider>

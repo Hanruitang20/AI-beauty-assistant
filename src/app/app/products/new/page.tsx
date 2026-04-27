@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { createProduct } from "@/lib/products-store";
+import { createProductAsync } from "@/lib/product-service";
 import { ProductForm, ProductFormValues } from "@/components/products/product-form";
 import { useToast } from "@/components/ui/toast-provider";
+import { getSafeReturnTo } from "@/lib/navigation";
 
 const initialForm: ProductFormValues = {
   productName: "",
@@ -20,22 +21,29 @@ const initialForm: ProductFormValues = {
 
 export default function NewProductPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const safeReturnTo = getSafeReturnTo(searchParams.get("returnTo"), "/app/products");
 
   async function handleCreate(form: ProductFormValues) {
     const normalizedCategory = form.categoryType === "custom" ? form.customCategory.trim() : form.category;
-    const created = createProduct({
-      name: form.productName,
-      brand: form.brand,
-      category: normalizedCategory,
-      categoryType: form.categoryType,
-      sourceType: form.sourceType,
-      usageDurationMonths: Number(form.usageDurationMonths),
-      note: form.note || undefined,
-      status: form.status,
-    });
-    showToast({ tone: "success", message: `已添加「${created.name}」` });
-    router.push("/app/products");
+    try {
+      const created = await createProductAsync({
+        name: form.productName,
+        brand: form.brand,
+        category: normalizedCategory,
+        categoryType: form.categoryType,
+        sourceType: form.sourceType,
+        usageDurationMonths: Number(form.usageDurationMonths),
+        note: form.note || undefined,
+        status: form.status,
+      });
+      showToast({ tone: "success", message: `已添加「${created.name}」` });
+      router.push(safeReturnTo);
+    } catch {
+      showToast({ tone: "error", message: "保存失败，请稍后重试。" });
+      throw new Error("Create product failed.");
+    }
   }
 
   return (

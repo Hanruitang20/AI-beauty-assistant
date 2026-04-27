@@ -1,35 +1,90 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
-import { getStoredProducts } from "@/lib/products-store";
-import { getSavedProfile } from "@/lib/profile-store";
-import { getProfileDraft } from "@/lib/profile-draft";
 import { BeautyProduct } from "@/lib/products";
 import { PRODUCT_PRIMARY_CATEGORIES, ProductPrimaryCategory } from "@/lib/product-categories";
 import { buildRecommendationViewModel, RecommendationInsight } from "@/lib/recommendation-service";
 import { appendReturnTo } from "@/lib/navigation";
-import { getExperiencesByProductIds } from "@/lib/product-experience-service";
+import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
+import { getProductsAsync } from "@/lib/product-service";
+import { getProfileAsync, getProfileDraftAsync } from "@/lib/profile-service";
 
 export default function RecommendationsPage() {
-  const savedProfile = getSavedProfile();
-  const profileDraft = getProfileDraft() || null;
-  const products = getStoredProducts();
-  const experiencesByProductId = getExperiencesByProductIds(products.map((product) => product.id));
+  const [savedProfile, setSavedProfile] = useState<Awaited<ReturnType<typeof getProfileAsync>>>(null);
+  const [profileDraft, setProfileDraft] = useState<Awaited<ReturnType<typeof getProfileDraftAsync>>>(null);
+  const [products, setProducts] = useState<BeautyProduct[]>([]);
+  const [experiencesByProductId, setExperiencesByProductId] = useState<Record<string, ProductExperience>>({});
   const [analysisCategory, setAnalysisCategory] = useState<ProductPrimaryCategory>("all");
   const [analysisRefreshSeed, setAnalysisRefreshSeed] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [nextProducts, nextProfile, nextProfileDraft] = await Promise.all([
+          getProductsAsync(),
+          getProfileAsync(),
+          getProfileDraftAsync(),
+        ]);
+        if (!active) return;
+
+        setProducts(nextProducts);
+        setSavedProfile(nextProfile);
+        setProfileDraft(nextProfileDraft || null);
+
+        const nextExperiences = await getExperiencesByProductIdsAsync(nextProducts.map((product) => product.id));
+        if (!active) return;
+        setExperiencesByProductId(nextExperiences);
+      } catch {
+        if (!active) return;
+        setError("推荐数据加载失败，请稍后重试。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const recommendationView = buildRecommendationViewModel({
     products,
-    profile: savedProfile || null,
-    assessmentDraft: profileDraft || null,
+    profile: savedProfile,
+    assessmentDraft: profileDraft,
     selectedCategory: analysisCategory,
     isSignedIn: true,
     experiencesByProductId,
     refreshSeed: analysisRefreshSeed,
   });
+
+  if (loading) {
+    return (
+      <Card className="space-y-4 rounded-[24px]">
+        <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
+        <FeedbackState>数据加载中...</FeedbackState>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="space-y-4 rounded-[24px]">
+        <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
+        <FeedbackState>{error}</FeedbackState>
+      </Card>
+    );
+  }
 
   if (recommendationView.state === "A_EMPTY_NO_PROFILE") {
     return (

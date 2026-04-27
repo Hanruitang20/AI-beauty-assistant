@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { MobileAppFrame } from "@/components/layout/mobile-app-frame";
-import { isSignedIn } from "@/lib/mock-auth";
+import { isSignedInAsync } from "@/lib/auth-service";
 import { ToastProvider } from "@/components/ui/toast-provider";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -13,15 +13,23 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn()) {
-      router.replace("/app/products");
-      return;
+    let active = true;
+    async function checkAuth() {
+      const signedIn = await isSignedInAsync();
+      if (!active) return;
+      if (signedIn) {
+        router.replace("/app/products");
+        return;
+      }
+      setReady(true);
     }
-    const readyTimer = window.setTimeout(() => setReady(true), 0);
-    return () => window.clearTimeout(readyTimer);
+    void checkAuth();
+    return () => {
+      active = false;
+    };
   }, [pathname, router]);
 
-  if (!ready) return null;
+  if (!ready) return <div className="sr-only">加载中...</div>;
 
   return (
     <ToastProvider>

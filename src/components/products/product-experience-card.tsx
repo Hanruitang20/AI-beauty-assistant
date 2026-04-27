@@ -9,7 +9,7 @@ import {
   ProductIntention,
   ProductReaction,
   ProductUsageFrequency,
-  saveProductExperience,
+  saveProductExperienceAsync,
 } from "@/lib/product-experience-service";
 
 const usageFrequencyOptions: Array<{ value: ProductUsageFrequency; label: string }> = [
@@ -45,14 +45,29 @@ export function ProductExperienceCard({
   const primaryCategory = getPrimaryCategory(productCategory);
   const feedbackOptions = getFeedbackOptionsByPrimaryCategory(primaryCategory);
 
-  function updateExperience(patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>) {
-    const next = saveProductExperience(productId, patch);
-    setExperience(next);
+  async function updateExperience(patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>) {
+    const optimistic: ProductExperience = {
+      productId,
+      ...(experience || {}),
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    setExperience(optimistic);
     if (Object.prototype.hasOwnProperty.call(patch, "feedbackNote")) {
-      setFeedbackNoteDraft(next.feedbackNote || "");
+      setFeedbackNoteDraft((patch.feedbackNote as string | undefined) || "");
     }
-    onUpdated?.(next);
-    showToast({ tone: "success", message: "已更新使用感受" });
+    onUpdated?.(optimistic);
+    try {
+      const next = await saveProductExperienceAsync(productId, patch);
+      setExperience(next);
+      if (Object.prototype.hasOwnProperty.call(patch, "feedbackNote")) {
+        setFeedbackNoteDraft(next.feedbackNote || "");
+      }
+      onUpdated?.(next);
+      showToast({ tone: "success", message: "已更新使用感受" });
+    } catch {
+      showToast({ tone: "error", message: "保存失败，请稍后重试。" });
+    }
   }
 
   function normalizeSelectedReaction(value?: ProductReaction) {
@@ -65,7 +80,7 @@ export function ProductExperienceCard({
     const normalized = feedbackNoteDraft.trim();
     const current = (experience?.feedbackNote || "").trim();
     if (normalized === current) return;
-    updateExperience({ feedbackNote: normalized || undefined });
+    void updateExperience({ feedbackNote: normalized || undefined });
   }
 
   return (
@@ -83,10 +98,10 @@ export function ProductExperienceCard({
                 onClick={() => {
                   const current = experience?.rating;
                   if (current === score) {
-                    updateExperience({ rating: undefined });
+                    void updateExperience({ rating: undefined });
                     return;
                   }
-                  updateExperience({ rating: score as 1 | 2 | 3 | 4 | 5 });
+                  void updateExperience({ rating: score as 1 | 2 | 3 | 4 | 5 });
                 }}
                 className={`text-lg transition-colors ${active ? "text-[var(--accent)]" : "text-[var(--border-soft)] hover:text-[var(--accent)]"}`}
               >
@@ -101,19 +116,19 @@ export function ProductExperienceCard({
         title="使用频率"
         options={usageFrequencyOptions}
         selected={experience?.usageFrequency}
-        onSelect={(value) => updateExperience({ usageFrequency: value })}
+        onSelect={(value) => void updateExperience({ usageFrequency: value })}
       />
       <ExperienceChips
         title="使用反馈"
         options={feedbackOptions}
         selected={normalizeSelectedReaction(experience?.reaction)}
-        onSelect={(value) => updateExperience({ reaction: value })}
+        onSelect={(value) => void updateExperience({ reaction: value })}
       />
       <ExperienceChips
         title="后续意愿"
         options={intentionOptions}
         selected={experience?.intention}
-        onSelect={(value) => updateExperience({ intention: value })}
+        onSelect={(value) => void updateExperience({ intention: value })}
       />
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">一句话感受（可选）</p>

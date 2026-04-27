@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,17 +20,46 @@ import {
 } from "@/lib/products";
 import { appendReturnTo, getCurrentPathWithQuery } from "@/lib/navigation";
 import { TopLevelCategory, topLevelCategoryOptions } from "@/lib/product-taxonomy";
-import { getStoredProducts } from "@/lib/products-store";
-import { getExperiencesByProductIds } from "@/lib/product-experience-service";
+import { getProductsAsync } from "@/lib/product-service";
+import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
 
 export default function AllProductsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
-  const experiencesByProductId = getExperiencesByProductIds(items.map((item) => item.id));
+  const [items, setItems] = useState<BeautyProduct[]>([]);
+  const [experiencesByProductId, setExperiencesByProductId] = useState<Record<string, ProductExperience>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const query = searchParams.get("q") || "";
   const selectedCategory = getCategoryIdFromParam(searchParams.get("category"));
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const nextItems = await getProductsAsync();
+        if (!active) return;
+        setItems(nextItems);
+        const nextExperiences = await getExperiencesByProductIdsAsync(nextItems.map((item) => item.id));
+        if (!active) return;
+        setExperiencesByProductId(nextExperiences);
+      } catch {
+        if (!active) return;
+        setError("产品数据加载失败，请稍后重试。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const currentReturnTo = useMemo(() => {
     return getCurrentPathWithQuery(pathname, searchParams);
@@ -128,7 +157,11 @@ export default function AllProductsPage() {
             搜索中：{query}
           </p>
         ) : null}
-        {items.length === 0 ? (
+        {loading ? (
+          <FeedbackState>产品加载中...</FeedbackState>
+        ) : error ? (
+          <FeedbackState>{error}</FeedbackState>
+        ) : items.length === 0 ? (
           <div className="space-y-3">
             <FeedbackState>还没有产品记录。</FeedbackState>
             <Link href="/app/products/new">

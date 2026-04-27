@@ -1,21 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BeautyProduct, productStatusLabelMap, sourceTypeLabelMap } from "@/lib/products";
-import { getStoredProducts } from "@/lib/products-store";
-import { getSavedProfile } from "@/lib/profile-store";
-import { getProfileDraft } from "@/lib/profile-draft";
 import { deriveUserAppState } from "@/lib/user-state";
 import { appendReturnTo } from "@/lib/navigation";
-import { getExperiencesByProductIds } from "@/lib/product-experience-service";
+import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
+import { getProductsAsync } from "@/lib/product-service";
+import { getProfileAsync, getProfileDraftAsync } from "@/lib/profile-service";
 
 export default function ProductsPage() {
-  const [items] = useState<BeautyProduct[]>(() => getStoredProducts());
-  const savedProfile = getSavedProfile();
-  const profileDraft = getProfileDraft();
+  const [items, setItems] = useState<BeautyProduct[]>([]);
+  const [savedProfile, setSavedProfile] = useState<Awaited<ReturnType<typeof getProfileAsync>>>(null);
+  const [profileDraft, setProfileDraft] = useState<Awaited<ReturnType<typeof getProfileDraftAsync>>>(null);
+  const [experiencesByProductId, setExperiencesByProductId] = useState<Record<string, ProductExperience>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [nextItems, nextProfile, nextProfileDraft] = await Promise.all([
+          getProductsAsync(),
+          getProfileAsync(),
+          getProfileDraftAsync(),
+        ]);
+        if (!active) return;
+
+        setItems(nextItems);
+        setSavedProfile(nextProfile);
+        setProfileDraft(nextProfileDraft);
+
+        const recentAdded = nextItems.slice(0, 3);
+        const nextExperiences = await getExperiencesByProductIdsAsync(recentAdded.map((item) => item.id));
+        if (!active) return;
+        setExperiencesByProductId(nextExperiences);
+      } catch {
+        if (!active) return;
+        setError("产品库数据加载失败，请稍后重试。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const userState = deriveUserAppState({
     isSignedIn: true,
     products: items,
@@ -24,7 +63,6 @@ export default function ProductsPage() {
   });
 
   const recentAdded = items.slice(0, 3);
-  const experiencesByProductId = getExperiencesByProductIds(recentAdded.map((item) => item.id));
 
   return (
     <div className="space-y-7">
@@ -42,7 +80,15 @@ export default function ProductsPage() {
         ) : null}
       </div>
 
-      {!userState.productCount ? (
+      {loading ? (
+        <Card className="rounded-[24px] text-center">
+          <p className="text-sm text-[var(--text-muted)]">数据加载中...</p>
+        </Card>
+      ) : error ? (
+        <Card className="rounded-[24px] text-center">
+          <p className="text-sm text-[var(--text-muted)]">{error}</p>
+        </Card>
+      ) : !userState.productCount ? (
         <Card className="rounded-[24px] text-center">
           <h2 className="text-xl font-semibold text-[var(--foreground)]">暂无产品</h2>
           <p className="mt-2 text-sm text-[var(--text-muted)]">

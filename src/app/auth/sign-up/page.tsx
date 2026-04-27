@@ -6,7 +6,7 @@ import { FormEvent, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signInMock } from "@/lib/mock-auth";
+import { signUpAsync } from "@/lib/auth-service";
 
 type SignUpState = {
   name: string;
@@ -36,13 +36,18 @@ export default function SignUpPage() {
 
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 900));
-    signInMock({
-      name: form.name || "BeautyShelf 用户",
-      email: form.email,
-      id: `bs_user_${Date.now().toString().slice(-6)}`,
-    });
-    setLoading(false);
-    router.replace("/app/onboarding");
+    try {
+      await signUpAsync({
+        name: form.name || "BeautyShelf 用户",
+        email: form.email,
+        id: `bs_user_${Date.now().toString().slice(-6)}`,
+      });
+      setLoading(false);
+      router.replace("/app/onboarding");
+    } catch {
+      setError("创建失败，请稍后重试。");
+      setLoading(false);
+    }
   }
 
   return (
