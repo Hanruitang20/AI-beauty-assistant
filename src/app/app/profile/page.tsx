@@ -16,6 +16,13 @@ import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/produc
 import { getProductsAsync } from "@/lib/product-service";
 import { getCurrentUserAsync } from "@/lib/auth-service";
 
+function getDisplayUserId(rawId?: string) {
+  if (!rawId) return "BSUSER";
+  // Display ID is shortened for UI only. Full uid remains the unique identifier.
+  const normalized = rawId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return (normalized || "BSUSER").slice(0, 8);
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -69,7 +76,7 @@ export default function ProfilePage() {
   const profileSensitivity = savedProfile?.sensitivityLevel || "未填写";
   const profileExperience = savedProfile?.experienceLevel || "未填写";
   const journeyPreview = useMemo(() => buildProductJourneyPreview(products, 3), [products]);
-  const shortUserId = (user?.id || "bs_user_mock").slice(0, 10).toUpperCase();
+  const displayUserId = useMemo(() => getDisplayUserId(user?.id), [user?.id]);
 
   function handleAvatarPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -130,10 +137,10 @@ export default function ProfilePage() {
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="editorial-heading text-2xl font-semibold text-[#3c3530]">{user?.name || "BeautyShelf 用户"}</h1>
-            <p className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              ID: {shortUserId}
+            <p className="max-w-full truncate overflow-hidden whitespace-nowrap text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              ID: {displayUserId}
             </p>
           </div>
         </div>
@@ -264,7 +271,7 @@ export default function ProfilePage() {
         onClick={async () => {
           await signOutAsync();
           queueToast({ tone: "success", message: "你已退出登录。" });
-          router.replace("/auth/login");
+          router.replace("/auth/sign-in");
         }}
       >
         退出登录

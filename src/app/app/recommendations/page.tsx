@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
@@ -12,6 +12,7 @@ import { appendReturnTo } from "@/lib/navigation";
 import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
 import { getProductsAsync } from "@/lib/product-service";
 import { getProfileAsync, getProfileDraftAsync } from "@/lib/profile-service";
+import type { ForYouAnalysisRequest, ForYouAnalysisResponse } from "@/lib/llm/for-you-schema";
 
 export default function RecommendationsPage() {
   const [savedProfile, setSavedProfile] = useState<Awaited<ReturnType<typeof getProfileAsync>>>(null);
@@ -22,6 +23,17 @@ export default function RecommendationsPage() {
   const [analysisRefreshSeed, setAnalysisRefreshSeed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [llmAnalysis, setLlmAnalysis] = useState<ForYouAnalysisResponse | null>(null);
+  const [isLlmLoading, setIsLlmLoading] = useState(false);
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const llmAnalysisRef = useRef<ForYouAnalysisResponse | null>(null);
+  const llmRequestSeqRef = useRef(0);
+  const inflightPayloadKeyRef = useRef<string | null>(null);
+  const lastSuccessfulPayloadKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    llmAnalysisRef.current = llmAnalysis;
+  }, [llmAnalysis]);
 
   useEffect(() => {
     let active = true;
@@ -68,6 +80,128 @@ export default function RecommendationsPage() {
     refreshSeed: analysisRefreshSeed,
   });
 
+  const llmPayload = useMemo<ForYouAnalysisRequest>(() => {
+    const stableProducts = products.map((item) => ({
+      id: item.id,
+      name: item.name,
+      brand: item.brand || undefined,
+      category: item.category,
+      status: item.status,
+    }));
+    const stableExperiences = Object.values(experiencesByProductId)
+      .map((item) => ({
+        productId: item.productId,
+        rating: item.rating,
+        usageFrequency: item.usageFrequency,
+        reaction: item.reaction,
+        intention: item.intention,
+        feedbackNote: item.feedbackNote,
+      }))
+      .sort((a, b) => a.productId.localeCompare(b.productId));
+    return {
+      profile: savedProfile
+        ? {
+            skinType: savedProfile.skinType || undefined,
+            mainConcerns: savedProfile.mainConcerns || undefined,
+            sensitivityLevel: savedProfile.sensitivityLevel || undefined,
+            experienceLevel: savedProfile.experienceLevel || undefined,
+          }
+        : null,
+      products: stableProducts,
+      experiences: stableExperiences,
+      context: {
+        selectedCategory: analysisCategory,
+        productCount: stableProducts.length,
+        experienceCount: stableExperiences.length,
+      },
+    };
+  }, [products, experiencesByProductId, savedProfile, analysisCategory]);
+
+  const payloadKey = useMemo(() => JSON.stringify(llmPayload), [llmPayload]);
+
+  useEffect(() => {
+    if (loading || error) return;
+    if (recommendationView.state === "A_EMPTY_NO_PROFILE" || recommendationView.state === "B_EMPTY_WITH_PROFILE") {
+      return;
+    }
+    if (!llmPayload.products.length) return;
+
+    let active = true;
+    const controller = new AbortController();
+    async function runLlmAnalysis() {
+      if (inflightPayloadKeyRef.current === payloadKey) return;
+      if (lastSuccessfulPayloadKeyRef.current === payloadKey && llmAnalysisRef.current) {
+        setLlmError(null);
+        return;
+      }
+
+      const requestId = llmRequestSeqRef.current + 1;
+      llmRequestSeqRef.current = requestId;
+      inflightPayloadKeyRef.current = payloadKey;
+      setIsLlmLoading(true);
+      setLlmError(null);
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (!active || requestId !== llmRequestSeqRef.current) return;
+
+      try {
+        const res = await fetch("/api/for-you-analysis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(llmPayload),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          throw new Error("llm_request_failed");
+        }
+        const data = (await res.json()) as ForYouAnalysisResponse;
+        if (!active || requestId !== llmRequestSeqRef.current) return;
+        lastSuccessfulPayloadKeyRef.current = payloadKey;
+        setLlmAnalysis(data);
+        setLlmError(null);
+      } catch (fetchError: unknown) {
+        if (!active || requestId !== llmRequestSeqRef.current) return;
+        if ((fetchError as Error)?.name === "AbortError") return;
+        if (!llmAnalysisRef.current && !lastSuccessfulPayloadKeyRef.current) {
+          setLlmError("AI 分析暂时不可用，已先根据你的记录生成基础分析。");
+        }
+      } finally {
+        if (!active || requestId !== llmRequestSeqRef.current) return;
+        if (inflightPayloadKeyRef.current === payloadKey) {
+          inflightPayloadKeyRef.current = null;
+        }
+        setIsLlmLoading(false);
+      }
+    }
+
+    void runLlmAnalysis();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [
+    loading,
+    error,
+    recommendationView.state,
+    payloadKey,
+    llmPayload,
+  ]);
+
+  const fallbackInsights = recommendationView.scopedInsights;
+  const llmInsights: RecommendationInsight[] = (llmAnalysis?.insights || []).map((item) => ({
+    title: item.title,
+    reason: item.reason,
+    nextStep: item.nextStep,
+  }));
+  const effectiveInsights = llmInsights.length > 0 ? llmInsights : fallbackInsights;
+  const llmSummary = llmAnalysis?.summary?.trim() || "";
+  const llmCaution = llmAnalysis?.caution?.trim() || "";
+  const llmActionHref = resolveSuggestedActionHref(
+    llmAnalysis?.suggestedNextAction?.target,
+    recommendationView.scopedProducts[0]?.id,
+  );
+
   if (loading) {
     return (
       <Card className="space-y-4 rounded-[24px]">
@@ -91,7 +225,7 @@ export default function RecommendationsPage() {
       <Card className="space-y-4 rounded-[24px]">
         <h1 className="editorial-heading text-2xl font-semibold tracking-tight text-[var(--foreground)]">为你</h1>
         <FeedbackState>
-          还需要了解你的个人情况和产品记录，才能帮你分析产品和使用方向。
+          先补充基础肤况与当前产品记录，我才能按你的护肤状态给出更贴合的使用整理。
         </FeedbackState>
         <div className="grid gap-2">
           <Link href="/app/assessment?returnTo=%2Fapp%2Frecommendations">
@@ -112,7 +246,7 @@ export default function RecommendationsPage() {
         <Card className="space-y-3 rounded-[24px]">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">个人画像</h2>
           <div className="grid gap-2 text-sm text-[var(--foreground)]">
-            {(recommendationView.profileSummary.length ? recommendationView.profileSummary : ["已完成个人画像，可继续补充更细致的信息。"]).map((line) => (
+            {(recommendationView.profileSummary.length ? recommendationView.profileSummary : ["已完成基础护肤画像，可继续补充细节让建议更贴近日常使用。"]).map((line) => (
               <p key={line}>· {line}</p>
             ))}
           </div>
@@ -120,7 +254,7 @@ export default function RecommendationsPage() {
         <Card className="space-y-3 rounded-[24px]">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">下一步行动</h2>
           <p className="text-sm text-[var(--text-muted)]">
-            你已完成个人画像。接下来添加正在使用、想买或被推荐的产品后，我就能进一步分析产品之间的搭配、重复和使用注意点。
+            你已完成个人画像。再补充在用、想买或被推荐的护肤产品后，我可以开始做流程位置、重复投入和使用风险提示。
           </p>
           <Link href="/app/products/new">
             <Button className="w-full">添加第一个产品</Button>
@@ -147,15 +281,28 @@ export default function RecommendationsPage() {
               ↻
             </button>
           </div>
+          {isLlmLoading ? <FeedbackState>正在整理你的护肤记录...</FeedbackState> : null}
+          {llmError && !llmAnalysis ? <p className="text-xs text-[var(--text-muted)]">{llmError}</p> : null}
+          {llmSummary ? (
+            <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
+              <p className="text-sm text-[var(--foreground)]">{llmSummary}</p>
+            </div>
+          ) : null}
+          {llmCaution ? <p className="text-xs text-[var(--text-muted)]">提醒：{llmCaution}</p> : null}
+          {llmAnalysis?.suggestedNextAction?.label && llmActionHref ? (
+            <Link href={llmActionHref}>
+              <Button variant="secondary" className="w-full">{llmAnalysis.suggestedNextAction.label}</Button>
+            </Link>
+          ) : null}
           <p className="text-sm text-[var(--foreground)]">
-            目前只能基于你记录的产品做初步整理。完善个人信息后，我才能结合你的肤质、敏感程度和主要诉求，给出更适合你的建议。
+            目前可先基于你的产品记录做护肤方向整理；补充肤质、敏感程度和主要诉求后，分析会更贴近你的实际耐受与目标。
           </p>
           <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
-          <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={recommendationView.scopedInsights} />
+          <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={effectiveInsights} />
         </Card>
         <Card className="space-y-3 rounded-[24px]">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">下一步行动</h2>
-          <p className="text-sm text-[var(--text-muted)]">先补充个人画像，再结合产品记录获得更准确的分析。</p>
+          <p className="text-sm text-[var(--text-muted)]">先补充个人画像，再结合产品与使用反馈获得更稳妥的建议。</p>
           <Link href="/app/assessment?returnTo=%2Fapp%2Frecommendations">
             <Button className="w-full">完善个人信息</Button>
           </Link>
@@ -171,7 +318,7 @@ export default function RecommendationsPage() {
       <Card className="space-y-3 rounded-[24px]">
         <h2 className="text-sm font-semibold text-[var(--foreground)]">个人画像</h2>
         <div className="grid gap-2 text-sm text-[var(--foreground)]">
-          {(recommendationView.profileSummary.length ? recommendationView.profileSummary : ["你已完成基础画像，可继续补充更细字段。"]).map((line) => (
+          {(recommendationView.profileSummary.length ? recommendationView.profileSummary : ["你已完成基础护肤画像，可继续补充细项，让分析更个性化。"]).map((line) => (
             <p key={line}>· {line}</p>
           ))}
         </div>
@@ -190,15 +337,28 @@ export default function RecommendationsPage() {
             ↻
           </button>
         </div>
+        {isLlmLoading ? <FeedbackState>正在整理你的护肤记录...</FeedbackState> : null}
+        {llmError && !llmAnalysis ? <p className="text-xs text-[var(--text-muted)]">{llmError}</p> : null}
+        {llmSummary ? (
+          <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
+            <p className="text-sm text-[var(--foreground)]">{llmSummary}</p>
+          </div>
+        ) : null}
+        {llmCaution ? <p className="text-xs text-[var(--text-muted)]">提醒：{llmCaution}</p> : null}
+        {llmAnalysis?.suggestedNextAction?.label && llmActionHref ? (
+          <Link href={llmActionHref}>
+            <Button variant="secondary" className="w-full">{llmAnalysis.suggestedNextAction.label}</Button>
+          </Link>
+        ) : null}
         <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
-        <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={recommendationView.scopedInsights} />
+        <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={effectiveInsights} />
       </Card>
 
       <Card className="space-y-3 rounded-[24px]">
         <h2 className="text-sm font-semibold text-[var(--foreground)]">下一步行动</h2>
         {recommendationView.productCount === 1 ? (
           <div className="grid gap-2">
-            <p className="text-sm text-[var(--text-muted)]">先理解这一个产品在你流程中的作用，再继续补充更多记录，让后续分析更完整。</p>
+            <p className="text-sm text-[var(--text-muted)]">先确认这一个产品在早晚流程中的位置与体感变化，再补充同类记录，后续比较会更可靠。</p>
             <Link href={appendReturnTo(`/app/products/${products[0]?.id}`, "/app/recommendations")}>
               <Button variant="secondary" className="w-full">查看这个产品详情</Button>
             </Link>
@@ -208,7 +368,7 @@ export default function RecommendationsPage() {
           </div>
         ) : (
           <div className="grid gap-2">
-            <p className="text-sm text-[var(--text-muted)]">继续补充使用体验（如刺激感、是否回购、搭配关系）后，分析会更贴近你的实际使用场景。</p>
+            <p className="text-sm text-[var(--text-muted)]">继续补充使用反馈（肤感变化、是否继续用、搭配稳定性）后，分析会更贴近你的日常护肤节奏。</p>
             <Link href="/app/products">
               <Button className="w-full">回到产品库</Button>
             </Link>
@@ -257,7 +417,7 @@ function ScopedAnalysisBody({ products, insights }: { products: BeautyProduct[];
   if (products.length === 0) {
     return (
       <div className="space-y-3">
-        <FeedbackState>这里还没有相关产品记录。添加这一类产品后，我可以帮你整理对应的产品分析。</FeedbackState>
+        <FeedbackState>当前分类下还没有护肤产品记录。补充这一类产品后，我可以基于你的画像与体验做对应分析。</FeedbackState>
         <div className="grid gap-2">
           <Link href="/app/products/new">
             <Button className="w-full">添加产品</Button>
@@ -275,11 +435,11 @@ function ScopedAnalysisBody({ products, insights }: { products: BeautyProduct[];
     return (
       <div className="space-y-3">
         <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
-          <p className="text-sm font-semibold text-[var(--foreground)]">单品基础分析</p>
+          <p className="text-sm font-semibold text-[var(--foreground)]">单品观察起点</p>
           <p className="mt-1 text-sm text-[var(--foreground)]">
-            当前分类下只有 1 个产品：{only.name}。先理解这款产品的作用，再补充同类或相关产品，才能做组合分析。
+            当前分类下仅有 1 个产品：{only.name}。建议先记录它在流程中的位置与体感变化，再补充同类进行对比。
           </p>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：进入详情页查看或生成该产品摘要。</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：进入详情页补充使用反馈并查看摘要。</p>
         </div>
         <Link
           href={appendReturnTo(`/app/products/${only.id}`, "/app/recommendations")}
@@ -295,7 +455,7 @@ function ScopedAnalysisBody({ products, insights }: { products: BeautyProduct[];
     <div className="space-y-3">
       <InsightsList insights={insights} />
       <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
-        <p className="text-xs font-medium text-[var(--text-muted)]">相关产品</p>
+        <p className="text-xs font-medium text-[var(--text-muted)]">可先从下列产品中补充连续体验，帮助判断组合稳定性。</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {products.slice(0, 4).map((product) => (
             <Link
@@ -325,4 +485,16 @@ function InsightsList({ insights }: { insights: RecommendationInsight[] }) {
       ))}
     </div>
   );
+}
+
+function resolveSuggestedActionHref(
+  target: ForYouAnalysisResponse["suggestedNextAction"]["target"] | undefined,
+  firstScopedProductId?: string,
+) {
+  if (!target) return null;
+  if (target === "profile") return "/app/profile";
+  if (target === "add_product") return "/app/products/new";
+  if (target === "continue_tracking") return "/app/products";
+  if (target === "product_detail") return firstScopedProductId ? `/app/products/${firstScopedProductId}` : "/app/products";
+  return null;
 }

@@ -3,18 +3,18 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { BeautyProduct, ProductCategory, productCategoryLabelMap, productStatusLabelMap } from "@/lib/products";
+import { BeautyProduct, productCategoryLabelMap, productStatusLabelMap } from "@/lib/products";
 import { getProductsAsync } from "@/lib/product-service";
-import { SKINCARE_PRODUCT_CATEGORY_OPTIONS } from "@/lib/product-options";
+import { SKINCARE_PRODUCT_CATEGORY_OPTIONS, SkincareCategoryValue } from "@/lib/product-options";
 
-const categoryTabs: Array<{ key: ProductCategory; label: string }> = SKINCARE_PRODUCT_CATEGORY_OPTIONS.map((item) => ({
+const categoryTabs: Array<{ key: SkincareCategoryValue; label: string }> = SKINCARE_PRODUCT_CATEGORY_OPTIONS.map((item) => ({
   key: item.value,
   label: item.label,
 }));
 
 export default function ProductCategoriesPage() {
   const [items, setItems] = useState<BeautyProduct[]>([]);
-  const [activeCategory, setActiveCategory] = useState<ProductCategory>("cleanser");
+  const [activeCategory, setActiveCategory] = useState<SkincareCategoryValue>("cleanser");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

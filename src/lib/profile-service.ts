@@ -5,9 +5,11 @@ import {
   saveProfileDraft as saveStoredProfileDraft,
 } from "@/lib/profile-draft";
 import { getSavedProfile, saveProfile as saveStoredProfile, SavedProfile } from "@/lib/profile-store";
+import { getScopedStorageKey, getScopedStorageKeyWithLegacyMigration } from "@/lib/storage-scope";
 import { hasValidProfile } from "@/lib/user-state";
 
-const MOCK_USER_AVATAR_KEY = "beautyshelf.mock-user-avatar";
+const PROFILE_AVATAR_KEY = "profile-avatar";
+const LEGACY_AVATAR_KEYS = ["beautyshelf.mock-user-avatar"];
 
 function hasWindow() {
   return typeof window !== "undefined";
@@ -64,7 +66,9 @@ export async function hasProfileAsync() {
 
 export function getUserAvatar() {
   if (!hasWindow()) return "";
-  return window.localStorage.getItem(MOCK_USER_AVATAR_KEY) || "";
+  const scopedKey = getScopedStorageKeyWithLegacyMigration(PROFILE_AVATAR_KEY, LEGACY_AVATAR_KEYS);
+  if (!scopedKey) return "";
+  return window.localStorage.getItem(scopedKey) || "";
 }
 
 export async function getUserAvatarAsync() {
@@ -73,7 +77,9 @@ export async function getUserAvatarAsync() {
 
 export function saveUserAvatar(value: string) {
   if (!hasWindow()) return;
-  window.localStorage.setItem(MOCK_USER_AVATAR_KEY, value);
+  const scopedKey = getScopedStorageKey(PROFILE_AVATAR_KEY);
+  if (!scopedKey) return;
+  window.localStorage.setItem(scopedKey, value);
 }
 
 export async function saveUserAvatarAsync(value: string) {
@@ -82,7 +88,9 @@ export async function saveUserAvatarAsync(value: string) {
 
 export function clearUserAvatar() {
   if (!hasWindow()) return;
-  window.localStorage.removeItem(MOCK_USER_AVATAR_KEY);
+  const scopedKey = getScopedStorageKey(PROFILE_AVATAR_KEY);
+  if (!scopedKey) return;
+  window.localStorage.removeItem(scopedKey);
 }
 
 export async function clearUserAvatarAsync() {

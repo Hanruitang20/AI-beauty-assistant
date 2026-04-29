@@ -40,7 +40,7 @@ export function ProductExperienceCard({
   const { showToast } = useToast();
   const [experience, setExperience] = useState<ProductExperience | null>(initialExperience);
   const [feedbackNoteDraft, setFeedbackNoteDraft] = useState(initialExperience?.feedbackNote || "");
-  const feedbackOptions: ReadonlyArray<{ value: ProductReaction; label: string }> = SKINCARE_REACTION_OPTIONS;
+  const feedbackOptions = SKINCARE_REACTION_OPTIONS;
 
   async function updateExperience(patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>) {
     const optimistic: ProductExperience = {
@@ -115,12 +115,7 @@ export function ProductExperienceCard({
         selected={experience?.usageFrequency}
         onSelect={(value) => void updateExperience({ usageFrequency: value })}
       />
-      <ExperienceChips
-        title="使用反馈"
-        options={feedbackOptions}
-        selected={normalizeSelectedReaction(experience?.reaction)}
-        onSelect={(value) => void updateExperience({ reaction: value })}
-      />
+      <ExperienceChips title="使用反馈" options={feedbackOptions} selected={normalizeSelectedReaction(experience?.reaction)} onSelect={(value) => void updateExperience({ reaction: value })} />
       <ExperienceChips
         title="后续意愿"
         options={intentionOptions}
@@ -187,4 +182,3 @@ function ExperienceChips<T extends string>({
     </div>
   );
 }
-

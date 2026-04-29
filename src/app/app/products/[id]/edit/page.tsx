@@ -9,7 +9,6 @@ import { getProductByIdAsync, updateProductAsync } from "@/lib/product-service";
 import { FeedbackState } from "@/components/ui/feedback-state";
 import { useToast } from "@/components/ui/toast-provider";
 import { appendReturnTo, getSafeReturnTo } from "@/lib/navigation";
-import { isSkincareCategoryValue } from "@/lib/product-options";
 
 export default function EditProductPage() {
   const params = useParams<{ id: string }>();
@@ -81,14 +80,12 @@ export default function EditProductPage() {
     );
   }
 
-  const shouldUseCustomCategory =
-    product.categoryType === "custom" || !isSkincareCategoryValue(product.category);
   const initialValues: ProductFormValues = {
     productName: product.name,
     brand: product.brand,
-    category: shouldUseCustomCategory ? "other" : product.category,
-    categoryType: shouldUseCustomCategory ? "custom" : "preset",
-    customCategory: shouldUseCustomCategory ? product.category : "",
+    category: product.categoryType === "custom" ? "other" : product.category,
+    categoryType: product.categoryType || "preset",
+    customCategory: product.categoryType === "custom" ? product.category : "",
     sourceType: product.sourceType,
     usageDurationMonths: String(product.usageDurationMonths ?? 0),
     note: product.note || "",

@@ -64,7 +64,7 @@ export default function SignUpPage() {
       <div className="space-y-2">
         <h1 className="editorial-heading text-3xl font-semibold tracking-tight text-[var(--foreground)]">创建账号</h1>
         <p className="text-sm text-[var(--text-muted)]">
-          不到 1 分钟，开启你的专属护肤产品库。
+          不到 1 分钟，开启你的专属美妆产品库。
         </p>
       </div>
 

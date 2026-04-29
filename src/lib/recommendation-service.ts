@@ -133,25 +133,25 @@ export function buildProductInsights(input: {
   const insights: RecommendationInsight[] = [];
   if (top) {
     insights.push({
-      title: "方向识别",
-      reason: `${categoryLabel}下当前最多的是「${getCategoryLabel(top[0])}」（${top[1]} 个），可先从这一组记录梳理重点。`,
-      nextStep: "先在同方向产品里对比使用状态，避免重复尝试。",
+      title: "当前记录重心",
+      reason: `在${categoryLabel}里，你目前记录最多的是「${getCategoryLabel(top[0])}」（${top[1]} 个）。可先围绕这一类做护肤步骤与体验对照。`,
+      nextStep: "先比较同类产品的在用状态与反馈，减少重复投入。",
     });
   }
   insights.push({
-    title: "搭配关系提示",
+    title: "流程与叠加观察",
     reason:
       hasSunscreen
-        ? "记录里包含防晒相关产品，建议结合日间流程观察叠加后的肤感、泛红风险和稳定性。"
-        : "建议先梳理当前产品在早晚护肤流程中的顺序，减少一次上太多新品带来的刺激风险。",
-    nextStep: "先固定基础步骤，再一次只新增一个变量观察 5-7 天。",
+        ? "你记录中包含防晒产品，建议优先关注日间叠加后的肤感稳定性与是否出现不适。"
+        : "建议先明确早晚护肤顺序，避免同一阶段叠加过多新品造成判断困难。",
+    nextStep: "先固定基础流程，每次只新增一个变量，连续观察约 5-7 天。",
   });
   const infoGapInsight: RecommendationInsight = {
-    title: "信息缺口",
+    title: "记录仍可补强",
     reason: input.hasProfile
-      ? `已有画像${input.profileSkinType ? `（${input.profileSkinType}）` : ""}，但仍缺少使用频率、刺激感和回购意愿等记录，当前分析仍是规则化判断。`
-      : "当前缺少个人画像与使用体验记录，因此只能做基础整理，不能做强个性化判断。",
-    nextStep: "后续在产品详情中补充使用记录（频率/体验/是否回购），分析会更具体。",
+      ? "你已有基础画像，但当前使用反馈还不够连续，现阶段分析更偏结构化整理。"
+      : "目前个人画像与使用反馈不足，暂时只能做基础梳理，无法给到更细的个性化建议。",
+    nextStep: "在产品详情补充频率、体感与后续意愿，分析会更贴近日常护肤体验。",
   };
 
   const experienceInsight = buildExperienceInsight({
@@ -182,25 +182,25 @@ function buildExperienceInsight(input: {
     const avg = rated.reduce((sum, item) => sum + (item.rating || 0), 0) / rated.length;
     if (avg >= 4) {
       candidates.push({
-        title: "高满意产品可以作为稳定参考",
+        title: "高满意记录可先作为稳定锚点",
         reason: hasProfile
-          ? "当前范围内评分整体偏高，可结合你的画像与这些稳定体验，作为后续小步调整的参考。"
-          : "当前范围内评分整体偏高，可先把这些产品作为相对稳定的使用参考，再小步尝试新变量。",
-        nextStep: "优先保留高满意产品，再一次只调整一个产品观察变化。",
+          ? "当前范围内评分整体较高，可优先保留这些更稳定的使用项，再做小步调整。"
+          : "当前范围内评分整体较高，可优先保留这些更稳定的使用项，再做小步调整。",
+        nextStep: "优先保持稳定项，每次只调整一个产品观察变化。",
       });
     }
     if (avg < 3) {
       candidates.push({
-        title: "先关注低评分产品的共同点",
-      reason: "当前范围内有评分偏低的记录，可以回看它们的品类、使用频率和肤感反馈，减少相似方向的重复尝试。",
-        nextStep: "先暂停低评分方向的新增尝试，优先观察已有稳定项。",
+        title: "先复盘低评分共性",
+        reason: "当前范围内存在低评分记录，建议回看其使用频率、肤感反馈与流程位置，减少重复试错。",
+        nextStep: "先暂停低评分方向新增，优先观察已稳定产品。",
       });
     }
   } else if (rated.length === 1) {
     candidates.push({
-      title: "先从单品感受开始判断",
-      reason: "你已经记录了这个产品的评分，可以继续结合使用频率和后续意愿，判断它是否值得长期保留。",
-      nextStep: "继续补充同类产品体验后，再做组合层面的判断。",
+      title: "先沉淀单品体验",
+      reason: "你已有 1 条评分记录，适合继续补充使用频率与后续意愿，逐步判断是否长期保留。",
+      nextStep: "补充同类产品体验后，再做组合层面的比较。",
     });
   }
 
@@ -214,16 +214,16 @@ function buildExperienceInsight(input: {
     reactionSet.has("uncomfortable")
   ) {
     candidates.push({
-      title: "先留意不适反应",
-      reason: "当前范围内记录过刺痛泛红、闷痘闭口或厚重不适等反应，建议先减少同时尝试的变量，再观察是否与某类产品反复相关。",
-      nextStep: "先稳定 5-7 天，只保留基础步骤并记录变化。",
+      title: "先优先观察不适信号",
+      reason: "当前范围内出现过刺痛、泛红或闷痘等不适反馈，建议减少同时变量，先看状态是否回稳。",
+      nextStep: "先用更稳定的基础步骤连续观察 5-7 天。",
     });
   }
   if (reactionSet.size > 0 && reactionSet.size === 1 && (reactionSet.has("none") || reactionSet.has("no_issue"))) {
     candidates.push({
-      title: "目前没有明显不适记录",
-      reason: "当前范围内的使用感受里暂时没有明显不适反应，可以继续观察长期使用下的稳定性。",
-      nextStep: "保持当前节奏，补充持续使用后的评分和意愿。",
+      title: "当前未见明显不适反馈",
+      reason: "现有记录里暂未出现明显不适，可继续关注长期使用下的稳定性与一致性。",
+      nextStep: "保持当前节奏，持续补充评分与后续意愿。",
     });
   }
 
@@ -234,14 +234,14 @@ function buildExperienceInsight(input: {
   }, {});
   if ((intentionCount.continue || 0) + (intentionCount.repurchase || 0) > 0) {
     candidates.push({
-      title: "愿意继续用的产品值得沉淀",
-      reason: "你已标记部分产品愿意继续使用或可能回购，它们可以作为后续偏好判断的参考。",
-      nextStep: "优先围绕这些产品补充连续使用体验，形成稳定结论。",
+      title: "愿意继续用的产品可沉淀为偏好",
+      reason: "你已标记部分产品愿意继续使用或回购，这些记录可作为后续选品偏好依据。",
+      nextStep: "优先补充这些产品的连续体验，形成更稳定判断。",
     });
   }
   if ((intentionCount.stop || 0) > 0) {
     candidates.push({
-      title: "不会继续用的产品也有价值",
+      title: "不继续用的记录同样有价值",
       reason: "被标记为不会继续用的产品能帮助你识别不适合方向，减少后续重复尝试。",
       nextStep: "回看这些记录的共同点，并在后续选择里避开相似方向。",
     });
@@ -254,24 +254,24 @@ function buildExperienceInsight(input: {
   }, {});
   if ((freqCount.not_started || 0) > (scopedExperiences.length / 2)) {
     candidates.push({
-      title: "未开始使用的产品先不做强判断",
-      reason: "当前范围内不少产品还没有开始使用，建议先记录初次体验后再判断是否继续保留。",
+      title: "未实测产品先不下结论",
+      reason: "当前范围内仍有较多产品未开始使用，建议先补充初次体验后再判断去留。",
       nextStep: "先从一个产品开始，记录首次使用感受。",
     });
   }
   if ((freqCount.daily || 0) > (scopedExperiences.length / 2)) {
     candidates.push({
-      title: "常用产品更适合持续观察",
-      reason: "你已有产品处在较高使用频率下，后续可关注是否持续稳定，而不只看第一次感受。",
-      nextStep: "持续记录 1-2 周，观察体验是否稳定。",
+      title: "高频使用产品更值得持续跟踪",
+      reason: "你已有较高频使用记录，建议关注连续一段时间后的稳定性，而不只看单次体感。",
+      nextStep: "持续记录 1-2 周，观察反馈是否稳定。",
     });
   }
 
   if (!candidates.length) {
     candidates.push({
-      title: "还在观察的产品不急着下结论",
-      reason: "当前范围内有产品仍在观察阶段，建议继续记录评分与体验变化，再做下一步判断。",
-      nextStep: "先补充 2-3 条稳定记录，再决定是否继续保留。",
+      title: "观察期内先稳步记录",
+      reason: "当前范围内仍在观察阶段，建议先补充连续记录，再决定是否长期保留。",
+      nextStep: "先累计 2-3 条稳定记录后再做决策。",
     });
   }
 

@@ -143,11 +143,11 @@ export function ProfileForm() {
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">主要关注方向</span>
             <Select value={form.primaryFocus} onChange={(e) => setForm((p) => ({ ...p, primaryFocus: e.target.value }))}>
               <option value="">请选择方向</option>
-              <option value="基础稳定">基础稳定</option>
-              <option value="保湿修护">保湿修护</option>
-              <option value="控油平衡">控油平衡</option>
-              <option value="提亮与匀净">提亮与匀净</option>
-              <option value="抗老与细纹">抗老与细纹</option>
+              <option value="护肤">护肤</option>
+              <option value="身体护理">身体护理</option>
+              <option value="头发护理">头发护理</option>
+              <option value="彩妆">彩妆</option>
+              <option value="混合关注">混合关注</option>
             </Select>
           </label>
 

@@ -1,15 +1,23 @@
-# BeautyShelf AI (V1.5 Final)
+# BeautyShelf AI (V3.0 In Progress)
 
-BeautyShelf AI is a local-first MVP for recording beauty/care products, building a personal profile, and getting mock AI-style guidance.
+BeautyShelf AI is a local-first app for recording beauty/care products, building a personal profile, and getting mock AI-style guidance.
 
-This version is intentionally frontend-only:
+Current architecture status:
 
 - Next.js App Router + TypeScript + Tailwind CSS
-- localStorage/mock data
-- mock auth
+- repository + data-source abstraction layer (local / remote-ready)
+- localStorage data for products/profile/experience/summaries
+- auth source switch via env (`local` mock or `remote` Firebase Auth)
 - mock summary and recommendation logic
 
-No real backend, database, auth provider, or AI API is connected.
+No Firestore/backend product data sync or real AI API is connected yet.
+
+## Current Progress
+
+- ✅ V3.0 Phase 1A-1E: data-source/repository foundation + async service/page migration completed
+- ✅ V3.0 Phase 2A: Firebase client + remote auth repository adapter completed
+- ✅ V3.0 Phase 2B: auth flow can switch to Firebase Auth via env
+- ⏳ Next: database schema + remote product/profile/experience persistence (Firestore or equivalent)
 
 ## Quick Start
 
@@ -31,6 +39,28 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### Auth source switch (V3.0)
+
+Set in `.env.local`:
+
+```bash
+# local (default): mock auth
+NEXT_PUBLIC_DATA_SOURCE=local
+
+# remote: Firebase Auth
+# NEXT_PUBLIC_DATA_SOURCE=remote
+```
+
+When `NEXT_PUBLIC_DATA_SOURCE=remote`, Firebase Auth uses:
+
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` (optional)
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` (optional)
+- `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (optional)
 
 ### Other commands
 
@@ -63,9 +93,10 @@ npm run start
 - `/app/profile`: avatar, product journey preview, profile summary, account actions
 - `/app/notifications`: lightweight placeholder notification center
 
-## Data Storage (Local Only)
+## Data Storage
 
-All data is stored in browser localStorage/sessionStorage.
+Product/profile/experience/summaries remain stored in browser localStorage/sessionStorage.
+Auth can be mock-local or Firebase Auth depending on `NEXT_PUBLIC_DATA_SOURCE`.
 
 Important keys:
 
@@ -88,7 +119,7 @@ Important keys:
 - Product and avatar image uploads are local previews (stored as data URL), not uploaded to a server.
 - Recommendation and summary content are rule-based/mock outputs.
 
-## Notes for Future V2 Work
+## Notes for Next Work
 
 - Keep UI behavior stable while refactoring services/stores.
 - Prepare model contracts before integrating real backend/AI.

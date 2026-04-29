@@ -10,13 +10,13 @@ export type ProductReaction =
   | "absorbs_fast"
   | "gentle"
   | "effective"
-  | "clogging_or_breakout"
-  | "stinging_or_redness"
-  | "too_oily_or_heavy"
   | "uncomfortable"
   | "irritating_or_breakout"
   | "dry_or_tight"
   | "texture_not_ideal"
+  | "clogging_or_breakout"
+  | "stinging_or_redness"
+  | "too_oily_or_heavy"
   | "drying_or_cakey"
   | "not_smooth_or_pilling"
   | "poor_longevity"
@@ -77,8 +77,8 @@ export function saveProductExperience(
   const previous = map[productId];
   const next: ProductExperience = {
     ...(previous || {}),
-    ...patch,
     productId,
+    ...patch,
     updatedAt: new Date().toISOString(),
   };
   map[productId] = next;
