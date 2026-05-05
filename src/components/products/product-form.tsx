@@ -177,7 +177,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
 
       {error ? <FeedbackState tone="error">{error}</FeedbackState> : null}
 
-      <div className="sticky bottom-20 z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
+      <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
         <Button className="w-full" type="submit" disabled={saving}>
           {saving ? "保存中..." : submitLabel || (mode === "create" ? "保存产品" : "保存修改")}
         </Button>

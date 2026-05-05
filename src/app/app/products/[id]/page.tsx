@@ -218,7 +218,7 @@ export default function ProductDetailPage() {
         </div>
         <button
           type="button"
-          className="absolute bottom-3 right-3 rounded-full border bg-[var(--surface)]/90 px-3 py-1 text-[11px] font-medium text-[var(--foreground)] shadow-sm"
+          className="absolute bottom-3 right-3 inline-flex min-h-11 items-center rounded-full border bg-[var(--surface)]/90 px-3 py-1 text-[11px] font-medium text-[var(--foreground)] shadow-sm"
           style={{ borderColor: "var(--border-soft)" }}
           onClick={() => imageInputRef.current?.click()}
         >
@@ -239,7 +239,7 @@ export default function ProductDetailPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">{getCategoryLabel(product.category)}</p>
             <h1 className="editorial-heading text-[30px] font-semibold tracking-tight text-[#3c3530]">{product.name}</h1>
           </div>
-          <Link href={editHref} className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-[var(--accent)]" style={{ borderColor: "var(--border-soft)" }}>
+          <Link href={editHref} className="inline-flex min-h-11 items-center rounded-full border px-3 py-1 text-xs font-medium text-[var(--accent)]" style={{ borderColor: "var(--border-soft)" }}>
             编辑
           </Link>
         </div>

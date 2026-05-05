@@ -432,7 +432,7 @@ export default function RecommendationsPage() {
             <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
             <button
               type="button"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
               style={{ borderColor: "var(--border-soft)" }}
               aria-label="刷新产品分析"
               onClick={() => setAnalysisRefreshSeed((seed) => seed + 1)}
@@ -481,7 +481,7 @@ export default function RecommendationsPage() {
           <h2 className="text-sm font-semibold text-[var(--foreground)]">产品分析</h2>
           <button
             type="button"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border text-xs text-[var(--text-muted)] hover:text-[var(--foreground)]"
             style={{ borderColor: "var(--border-soft)" }}
             aria-label="刷新产品分析"
             onClick={() => setAnalysisRefreshSeed((seed) => seed + 1)}
@@ -540,7 +540,7 @@ function CategoryChips({
               type="button"
               onClick={() => onChange(category.id)}
               className={[
-                "h-8 flex-shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+                "min-h-11 flex-shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
                 active
                   ? "bg-[var(--accent)] text-white"
                   : "bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-soft)]",

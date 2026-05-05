@@ -132,7 +132,7 @@ export default function ProductsPage() {
       {userState.productCount ? (
         <Link
           href="/app/products/new?returnTo=%2Fapp%2Fproducts"
-          className="fixed bottom-[88px] right-6 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-2xl text-white shadow-[0_10px_24px_rgba(60,53,48,0.2)] active:scale-[0.98]"
+          className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-5 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-2xl text-white shadow-[0_10px_24px_rgba(60,53,48,0.2)] active:scale-[0.98]"
           aria-label="添加产品"
         >
           +

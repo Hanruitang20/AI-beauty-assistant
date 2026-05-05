@@ -155,7 +155,7 @@ export function ProductExperienceCard({
           }}
           placeholder="例如：上脸更服帖，最近更稳定。"
           maxLength={60}
-          className="h-10 w-full rounded-xl border bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30"
+          className="min-h-11 w-full rounded-xl border bg-[var(--surface)] px-3 text-base text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--focus-ring)]/30"
           style={{ borderColor: "var(--border-soft)" }}
         />
       </div>
@@ -193,7 +193,7 @@ function MultiSelectExperienceChips<T extends string>({
                 onSelect([...selected, option.value]);
               }}
               className={[
-                "h-8 rounded-full border px-3 text-xs font-medium transition-colors",
+                "min-h-11 rounded-full border px-3 text-xs font-medium transition-colors",
                 active
                   ? "bg-[var(--accent)] text-white"
                   : "bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-soft)]",
@@ -232,7 +232,7 @@ function ExperienceChips<T extends string>({
               type="button"
               onClick={() => onSelect(option.value)}
               className={[
-                "h-8 rounded-full border px-3 text-xs font-medium transition-colors",
+                "min-h-11 rounded-full border px-3 text-xs font-medium transition-colors",
                 active
                   ? "bg-[var(--accent)] text-white"
                   : "bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-soft)]",

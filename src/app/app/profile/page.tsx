@@ -138,7 +138,7 @@ export default function ProfilePage() {
             </div>
             <button
               type="button"
-              className="absolute bottom-0 right-0 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-sm"
+              className="absolute bottom-0 right-0 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-sm"
               onClick={() => fileInputRef.current?.click()}
               aria-label="更换头像"
             >

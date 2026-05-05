@@ -92,22 +92,22 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <MobileAppFrame>
-      <div className="relative min-h-[calc(100vh-2rem)] bg-[var(--background)]">
+      <div className="relative min-h-screen bg-[var(--background)]">
         <header className="sticky top-0 z-20 border-b bg-[var(--surface)]/95 backdrop-blur" style={{ borderColor: "var(--border-soft)" }}>
-          <div className="flex items-center justify-between px-4 pb-2 pt-4">
+          <div className="flex items-center justify-between px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
             {showBack ? (
-              <Button variant="ghost" className="h-9 px-3 text-xs" onClick={handleBack}>
+              <Button variant="ghost" className="h-11 px-3 text-xs" onClick={handleBack}>
                 返回
               </Button>
             ) : (
-              <span className="inline-flex h-9 w-9" aria-hidden />
+              <span className="inline-flex h-11 w-11" aria-hidden />
             )}
             <Link href="/" className="editorial-heading text-lg font-semibold italic tracking-tight text-[#3c3530]">
               BeautyShelf AI
             </Link>
             <Link
               href="/app/notifications"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-soft)] text-[var(--accent)]"
               aria-label="通知中心"
             >
               🔔
@@ -118,7 +118,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="px-4 pb-28 pt-5">{children}</main>
+        <main className="overflow-x-hidden px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5">{children}</main>
 
         <nav
           className="fixed inset-x-0 bottom-0 z-30 border-t bg-[var(--surface)]/95 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur transition-none"
@@ -130,7 +130,7 @@ export function AppShell({ children }: AppShellProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-xl px-2 py-2 text-center text-[11px] font-semibold tracking-[0.08em] transition-none",
+                  "flex min-h-11 items-center justify-center rounded-xl px-2 py-2 text-center text-[11px] font-semibold tracking-[0.08em] transition-none",
                   pathname.startsWith(item.href)
                     ? "bg-[var(--surface-soft)] text-[var(--accent)]"
                     : "text-[var(--text-muted)]",

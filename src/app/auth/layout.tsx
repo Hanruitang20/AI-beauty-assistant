@@ -40,7 +40,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <MobileAppFrame>
-        <div className="min-h-[calc(100vh-2rem)] bg-[var(--background)] px-5 pb-8 pt-10">
+        <div className="min-h-screen bg-[var(--background)] px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))]">
           <div className="mx-auto w-full max-w-sm space-y-6">
             <div className="space-y-1 text-center">
               <Link href="/" className="editorial-heading text-2xl font-semibold italic tracking-tight text-[#3c3530]">
