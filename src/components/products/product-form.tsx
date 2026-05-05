@@ -24,9 +24,19 @@ type ProductFormProps = {
   initialValues: ProductFormValues;
   onSubmit: (values: ProductFormValues) => Promise<void>;
   submitLabel?: string;
+  /** sticky: floating above bottom nav (新建页). inline: normal flow below fields (编辑页). */
+  submitLayout?: "sticky" | "inline";
+  submitStickyClassName?: string;
 };
 
-export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: ProductFormProps) {
+export function ProductForm({
+  mode,
+  initialValues,
+  onSubmit,
+  submitLabel,
+  submitLayout = "sticky",
+  submitStickyClassName,
+}: ProductFormProps) {
   const [form, setForm] = useState<ProductFormValues>(initialValues);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -177,11 +187,21 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
 
       {error ? <FeedbackState tone="error">{error}</FeedbackState> : null}
 
-      <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur">
-        <Button className="w-full" type="submit" disabled={saving}>
-          {saving ? "保存中..." : submitLabel || (mode === "create" ? "保存产品" : "保存修改")}
-        </Button>
-      </div>
+      {submitLayout === "inline" ? (
+        <div className="mt-3 border-t pt-4" style={{ borderColor: "var(--border-soft)" }}>
+          <Button className="w-full" type="submit" disabled={saving}>
+            {saving ? "保存中..." : submitLabel || (mode === "create" ? "保存产品" : "保存修改")}
+          </Button>
+        </div>
+      ) : (
+        <div
+          className={`sticky ${submitStickyClassName || "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]"} z-10 rounded-xl bg-[var(--surface)]/85 py-2 backdrop-blur`}
+        >
+          <Button className="w-full" type="submit" disabled={saving}>
+            {saving ? "保存中..." : submitLabel || (mode === "create" ? "保存产品" : "保存修改")}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

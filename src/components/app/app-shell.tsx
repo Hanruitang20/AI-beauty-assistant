@@ -97,7 +97,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex items-center justify-between px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
             {showBack ? (
               <Button variant="ghost" className="h-11 px-3 text-xs" onClick={handleBack}>
-                返回
+                {"< "}返回
               </Button>
             ) : (
               <span className="inline-flex h-11 w-11" aria-hidden />

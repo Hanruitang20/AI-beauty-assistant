@@ -65,7 +65,7 @@ export default function EditProductPage() {
     return (
       <Card className="space-y-4">
         <FeedbackState>{loadError}</FeedbackState>
-        <Button onClick={() => handleBack(detailHref)}>返回详情页</Button>
+        <Button onClick={() => handleBack(detailHref)}>{"< "}返回详情页</Button>
       </Card>
     );
   }
@@ -75,7 +75,7 @@ export default function EditProductPage() {
       <Card className="space-y-4">
         <h1 className="text-2xl font-semibold text-rose-950">未找到该产品</h1>
         <FeedbackState>无法编辑：这个产品可能已经从本地数据中删除。</FeedbackState>
-        <Button onClick={() => handleBack("/app/products")}>返回产品库</Button>
+        <Button onClick={() => handleBack("/app/products")}>{"< "}返回产品库</Button>
       </Card>
     );
   }
@@ -121,15 +121,11 @@ export default function EditProductPage() {
       <div className="space-y-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-rose-950">编辑产品</h1>
-          <p className="mt-1 text-sm text-rose-700/80">随着使用变化，及时更新记录，让产品库更准确。</p>
         </div>
-        <Button variant="secondary" className="w-full" onClick={() => handleBack(detailHref)}>
-          返回详情页
-        </Button>
       </div>
 
       <Card>
-        <ProductForm mode="edit" initialValues={initialValues} onSubmit={handleUpdate} />
+        <ProductForm mode="edit" initialValues={initialValues} onSubmit={handleUpdate} submitLayout="inline" />
       </Card>
     </div>
   );

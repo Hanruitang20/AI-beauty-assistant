@@ -183,7 +183,7 @@ export default function ProductDetailPage() {
     return (
       <Card className="space-y-4">
         <FeedbackState>{loadError}</FeedbackState>
-        <Button onClick={handleBackToPrevious}>返回上一级</Button>
+        <Button onClick={handleBackToPrevious}>{"< "}返回上一级</Button>
       </Card>
     );
   }
@@ -195,7 +195,7 @@ export default function ProductDetailPage() {
         <p className="text-sm text-[var(--text-muted)]">
           本地数据中未找到该产品，请返回产品库查看。
         </p>
-        <Button onClick={handleBackToPrevious}>返回上一级</Button>
+        <Button onClick={handleBackToPrevious}>{"< "}返回上一级</Button>
       </Card>
     );
   }

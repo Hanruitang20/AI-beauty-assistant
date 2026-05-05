@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast-provider";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ProductExperience,
   ProductIntention,
@@ -38,9 +38,29 @@ export function ProductExperienceCard({
   onUpdated,
 }: ProductExperienceCardProps) {
   const { showToast } = useToast();
+  const successToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [experience, setExperience] = useState<ProductExperience | null>(initialExperience);
   const [feedbackNoteDraft, setFeedbackNoteDraft] = useState(initialExperience?.feedbackNote || "");
   const feedbackOptions = SKINCARE_REACTION_OPTIONS;
+
+  useEffect(() => {
+    return () => {
+      if (successToastTimerRef.current !== null) {
+        clearTimeout(successToastTimerRef.current);
+        successToastTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  function scheduleDebouncedSavedToast() {
+    if (successToastTimerRef.current !== null) {
+      clearTimeout(successToastTimerRef.current);
+    }
+    successToastTimerRef.current = setTimeout(() => {
+      successToastTimerRef.current = null;
+      showToast({ tone: "success", message: "已保存更新" });
+    }, 5000);
+  }
 
   async function updateExperience(patch: Partial<Omit<ProductExperience, "productId" | "updatedAt">>) {
     const optimistic: ProductExperience = {
@@ -61,7 +81,7 @@ export function ProductExperienceCard({
         setFeedbackNoteDraft(next.feedbackNote || "");
       }
       onUpdated?.(next);
-      showToast({ tone: "success", message: "已更新使用感受" });
+      scheduleDebouncedSavedToast();
     } catch {
       showToast({ tone: "error", message: "保存失败，请稍后重试。" });
     }
