@@ -15,6 +15,7 @@ import { appendReturnTo } from "@/lib/navigation";
 import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
 import { getProductsAsync } from "@/lib/product-service";
 import { getCurrentUserAsync } from "@/lib/auth-service";
+import { CURRENT_DATA_SOURCE_MODE } from "@/lib/data-source";
 
 function getDisplayUserId(rawId?: string) {
   if (!rawId) return "BSUSER";
@@ -49,6 +50,14 @@ export default function ProfilePage() {
           getUserAvatarAsync(),
         ]);
         if (!active) return;
+        if (CURRENT_DATA_SOURCE_MODE === "remote" && !nextUser) {
+          setUser(null);
+          setProducts([]);
+          setSavedProfile(null);
+          setAvatar("");
+          setJourneyExperiences({});
+          return;
+        }
         setUser(nextUser);
         setProducts(nextProducts);
         setSavedProfile(nextProfile);

@@ -2,9 +2,10 @@ import { BeautyProduct, getCategoryLabel, productStatusLabelMap } from "@/lib/pr
 import { getScopedStorageKey, getScopedStorageKeyWithLegacyMigration } from "@/lib/storage-scope";
 
 const PRODUCTS_KEY = "products";
-const SUMMARY_KEY = "beautyshelf.product-summaries";
+const SUMMARY_KEY = "product-summaries";
 const RECENT_VIEWED_KEY = "recent-viewed-products";
 const PRODUCT_IMAGES_KEY = "product-images";
+const LEGACY_SUMMARY_KEYS = ["beautyshelf.product-summaries"];
 
 export type ProductSummary = {
   whatFor: string;
@@ -111,7 +112,10 @@ export function deleteProductById(id: string) {
     const rest = { ...summaryMap };
     delete rest[id];
     if (hasWindow()) {
-      window.localStorage.setItem(SUMMARY_KEY, JSON.stringify(rest));
+      const summaryKey = getScopedStorageKey(SUMMARY_KEY);
+      if (summaryKey) {
+        window.localStorage.setItem(summaryKey, JSON.stringify(rest));
+      }
     }
   }
 
@@ -165,7 +169,9 @@ export function saveProductImageById(id: string, imageDataUrl: string) {
 
 export function getSummaryMap(): ProductSummaryMap {
   if (!hasWindow()) return {};
-  const raw = window.localStorage.getItem(SUMMARY_KEY);
+  const summaryKey = getScopedStorageKeyWithLegacyMigration(SUMMARY_KEY, LEGACY_SUMMARY_KEYS);
+  if (!summaryKey) return {};
+  const raw = window.localStorage.getItem(summaryKey);
   if (!raw) return {};
   try {
     return JSON.parse(raw) as ProductSummaryMap;
@@ -182,7 +188,9 @@ export function saveSummaryByProductId(id: string, summary: ProductSummary) {
   const all = getSummaryMap();
   const next = { ...all, [id]: summary };
   if (!hasWindow()) return;
-  window.localStorage.setItem(SUMMARY_KEY, JSON.stringify(next));
+  const summaryKey = getScopedStorageKey(SUMMARY_KEY);
+  if (!summaryKey) return;
+  window.localStorage.setItem(summaryKey, JSON.stringify(next));
 }
 
 export function generateMockSummary(product: BeautyProduct): ProductSummary {

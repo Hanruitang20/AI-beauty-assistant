@@ -1,4 +1,5 @@
 import { dataSource } from "@/lib/data-source";
+import { getScopedStorageKey, getScopedStorageKeyWithLegacyMigration } from "@/lib/storage-scope";
 
 export type ProductRating = 1 | 2 | 3 | 4 | 5;
 export type ProductUsageFrequency = "daily" | "weekly" | "occasionally" | "not_started";
@@ -40,7 +41,8 @@ export type ProductExperience = {
 };
 export type ProductExperiencePatch = Partial<Omit<ProductExperience, "productId" | "updatedAt">>;
 
-const PRODUCT_EXPERIENCES_KEY = "beautyshelf.product-experiences";
+const PRODUCT_EXPERIENCES_KEY = "product-experiences";
+const LEGACY_PRODUCT_EXPERIENCES_KEYS = ["beautyshelf.product-experiences"];
 
 type ProductExperienceMap = Record<string, ProductExperience>;
 
@@ -50,7 +52,9 @@ function hasWindow() {
 
 function getExperienceMap(): ProductExperienceMap {
   if (!hasWindow()) return {};
-  const raw = window.localStorage.getItem(PRODUCT_EXPERIENCES_KEY);
+  const key = getScopedStorageKeyWithLegacyMigration(PRODUCT_EXPERIENCES_KEY, LEGACY_PRODUCT_EXPERIENCES_KEYS);
+  if (!key) return {};
+  const raw = window.localStorage.getItem(key);
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as ProductExperienceMap;
@@ -62,7 +66,9 @@ function getExperienceMap(): ProductExperienceMap {
 
 function saveExperienceMap(map: ProductExperienceMap) {
   if (!hasWindow()) return;
-  window.localStorage.setItem(PRODUCT_EXPERIENCES_KEY, JSON.stringify(map));
+  const key = getScopedStorageKey(PRODUCT_EXPERIENCES_KEY);
+  if (!key) return;
+  window.localStorage.setItem(key, JSON.stringify(map));
 }
 
 export function getProductExperience(productId: string) {

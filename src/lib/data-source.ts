@@ -4,13 +4,37 @@ import { localProductRepository } from "@/lib/local/local-product-repository";
 import { localProductSummaryRepository } from "@/lib/local/local-product-summary-repository";
 import { localProfileRepository } from "@/lib/local/local-profile-repository";
 import { remoteAuthRepository } from "@/lib/remote/remote-auth-repository";
-import { remoteProductExperienceRepository } from "@/lib/remote/remote-product-experience-repository";
-import { remoteProductRepository } from "@/lib/remote/remote-product-repository";
-import { remoteProductSummaryRepository } from "@/lib/remote/remote-product-summary-repository";
-import { remoteProfileRepository } from "@/lib/remote/remote-profile-repository";
 import { DataSource, DataSourceMode } from "@/lib/data-source-types";
 
-const dataSourceByMode: Record<DataSourceMode, DataSource> = {
+export const DEFAULT_DATA_SOURCE_MODE: DataSourceMode = "remote";
+
+function resolveDataSourceMode(): DataSourceMode {
+  const raw = process.env.NEXT_PUBLIC_DATA_SOURCE;
+  if (!raw) return "remote";
+  if (raw === "local") return "local";
+  return "remote";
+}
+
+export const CURRENT_DATA_SOURCE_MODE: DataSourceMode = resolveDataSourceMode();
+export const AUTH_DATA_SOURCE_MODE: DataSourceMode = CURRENT_DATA_SOURCE_MODE;
+
+function resolveAuthProvider() {
+  const raw = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+  if (!raw) return "custom";
+  return raw === "firebase" ? "firebase" : "custom";
+}
+
+const remoteStorageBackedDataSource: DataSource = {
+  // Remote mode uses real auth provider + userId-scoped local storage repositories
+  // until full remote data repositories are implemented.
+  products: localProductRepository,
+  profile: localProfileRepository,
+  experiences: localProductExperienceRepository,
+  summaries: localProductSummaryRepository,
+  auth: remoteAuthRepository,
+};
+
+const runtimeDataSourceByMode: Record<DataSourceMode, DataSource> = {
   local: {
     products: localProductRepository,
     profile: localProfileRepository,
@@ -18,34 +42,24 @@ const dataSourceByMode: Record<DataSourceMode, DataSource> = {
     summaries: localProductSummaryRepository,
     auth: localAuthRepository,
   },
-  remote: {
-    products: remoteProductRepository,
-    profile: remoteProfileRepository,
-    experiences: remoteProductExperienceRepository,
-    summaries: remoteProductSummaryRepository,
-    auth: remoteAuthRepository,
-  },
+  remote: remoteStorageBackedDataSource,
 };
 
-export const DEFAULT_DATA_SOURCE_MODE: DataSourceMode = "local";
-
-function resolveDataSourceMode(): DataSourceMode {
-  return process.env.NEXT_PUBLIC_DATA_SOURCE === "remote" ? "remote" : "local";
-}
-
-export const AUTH_DATA_SOURCE_MODE: DataSourceMode = resolveDataSourceMode();
-
 if (process.env.NODE_ENV === "development") {
-  // Development visibility for source switching.
-  console.info("[DataSource] NEXT_PUBLIC_DATA_SOURCE =", process.env.NEXT_PUBLIC_DATA_SOURCE || "local");
-  console.info("[DataSource] auth source =", AUTH_DATA_SOURCE_MODE);
+  const raw = process.env.NEXT_PUBLIC_DATA_SOURCE;
+  const authProvider = resolveAuthProvider();
+  console.info("[AuthDiagnostics] dataSource =", CURRENT_DATA_SOURCE_MODE);
+  console.info("[AuthDiagnostics] authProvider =", authProvider);
+  console.info("[AuthDiagnostics] NEXT_PUBLIC_DATA_SOURCE =", raw || "(unset -> remote)");
+  if (CURRENT_DATA_SOURCE_MODE === "local") {
+    console.warn("[AuthDiagnostics] local mode is dev backup only; default real-chain mode is remote/custom auth.");
+  }
 }
 
 export const dataSource: DataSource = {
-  ...dataSourceByMode[DEFAULT_DATA_SOURCE_MODE],
-  auth: dataSourceByMode[AUTH_DATA_SOURCE_MODE].auth,
+  ...runtimeDataSourceByMode[CURRENT_DATA_SOURCE_MODE],
 };
 
-export function getDataSource(mode: DataSourceMode = DEFAULT_DATA_SOURCE_MODE) {
-  return dataSourceByMode[mode];
+export function getDataSource(mode: DataSourceMode = CURRENT_DATA_SOURCE_MODE) {
+  return runtimeDataSourceByMode[mode];
 }

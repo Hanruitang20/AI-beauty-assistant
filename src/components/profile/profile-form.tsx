@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
+import { SKINCARE_PRODUCT_CATEGORY_OPTIONS } from "@/lib/product-options";
 import {
   clearProfileDraftAsync,
   getProfileAsync,
@@ -16,6 +17,34 @@ import { FeedbackState } from "@/components/ui/feedback-state";
 import { useToast } from "@/components/ui/toast-provider";
 
 type ProfileFormState = SavedProfile;
+
+const MAIN_CONCERN_TAG_OPTIONS = ["干燥/缺水", "出油/毛孔", "敏感/泛红", "痘痘/闭口", "暗沉/肤色不均", "屏障不稳"] as const;
+
+function parseMainConcerns(value: string) {
+  const parts = value
+    .split(/[，,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const selectedTags: string[] = [];
+  const extras: string[] = [];
+  parts.forEach((part) => {
+    if (MAIN_CONCERN_TAG_OPTIONS.includes(part as (typeof MAIN_CONCERN_TAG_OPTIONS)[number])) {
+      if (!selectedTags.includes(part)) selectedTags.push(part);
+    } else {
+      extras.push(part);
+    }
+  });
+  return {
+    selectedTags,
+    extraText: extras.join("，"),
+  };
+}
+
+function buildMainConcernsValue(selectedTags: string[], extraText: string) {
+  const orderedTags = selectedTags.filter((item) => MAIN_CONCERN_TAG_OPTIONS.includes(item as (typeof MAIN_CONCERN_TAG_OPTIONS)[number]));
+  const normalizedExtra = extraText.trim();
+  return [...orderedTags, ...(normalizedExtra ? [normalizedExtra] : [])].join("，");
+}
 
 const initialForm: ProfileFormState = {
   primaryFocus: "",
@@ -38,10 +67,11 @@ export function ProfileForm() {
 
   const [form, setForm] = useState<ProfileFormState>(initialForm);
   const [prefilledFromAssessment, setPrefilledFromAssessment] = useState(false);
-  const [loadedFromSavedProfile, setLoadedFromSavedProfile] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedMainConcernTags, setSelectedMainConcernTags] = useState<string[]>([]);
+  const [mainConcernExtra, setMainConcernExtra] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -67,8 +97,10 @@ export function ProfileForm() {
             : initialForm;
 
         setForm(nextFormState);
+        const parsedMainConcerns = parseMainConcerns(nextFormState.mainConcerns || "");
+        setSelectedMainConcernTags(parsedMainConcerns.selectedTags);
+        setMainConcernExtra(parsedMainConcerns.extraText);
         setPrefilledFromAssessment(shouldUseDraft);
-        setLoadedFromSavedProfile(Boolean(savedProfile && !shouldUseDraft));
       } catch {
         if (!active) return;
         setLoadError("个人档案加载失败，请稍后重试。");
@@ -97,10 +129,13 @@ export function ProfileForm() {
     setSaving(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      await saveProfileAsync(form);
+      const normalizedMainConcerns = buildMainConcernsValue(selectedMainConcernTags, mainConcernExtra);
+      await saveProfileAsync({
+        ...form,
+        mainConcerns: normalizedMainConcerns,
+      });
       await clearProfileDraftAsync();
       setPrefilledFromAssessment(false);
-      setLoadedFromSavedProfile(true);
       showToast({ tone: "success", message: "个人画像已保存到本地。" });
       router.push(resolveReturnToPath());
     } catch {
@@ -133,21 +168,18 @@ export function ProfileForm() {
             {prefilledFromAssessment ? (
               <FeedbackState>我们已将测评结果作为起点应用到个人画像，你可以继续修改。</FeedbackState>
             ) : null}
-            {loadedFromSavedProfile ? (
-              <FeedbackState tone="info">已加载你此前保存的本地个人画像。</FeedbackState>
-            ) : null}
-            <FeedbackState tone="info">你可以随时调整信息，推荐会跟随更新。</FeedbackState>
           </div>
 
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">主要关注方向</span>
             <Select value={form.primaryFocus} onChange={(e) => setForm((p) => ({ ...p, primaryFocus: e.target.value }))}>
               <option value="">请选择方向</option>
-              <option value="护肤">护肤</option>
-              <option value="身体护理">身体护理</option>
-              <option value="头发护理">头发护理</option>
-              <option value="彩妆">彩妆</option>
-              <option value="混合关注">混合关注</option>
+              <option value="all">全部产品</option>
+              {SKINCARE_PRODUCT_CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </Select>
           </label>
 
@@ -166,11 +198,38 @@ export function ProfileForm() {
 
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">当前主要困扰/诉求</span>
-            <Input
-              placeholder="如：缺水、泛红、痘痘、暗沉"
-              value={form.mainConcerns}
-              onChange={(e) => setForm((p) => ({ ...p, mainConcerns: e.target.value }))}
-            />
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {MAIN_CONCERN_TAG_OPTIONS.map((tag) => {
+                  const active = selectedMainConcernTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() =>
+                        setSelectedMainConcernTags((prev) =>
+                          prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag],
+                        )
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        active
+                          ? "bg-[var(--accent)] text-white"
+                          : "bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-soft)]"
+                      }`}
+                      style={{ borderColor: active ? "var(--accent)" : "var(--border-soft)" }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <Input
+                placeholder="可补充一句：如换季更容易泛红，下午T区更易出油"
+                maxLength={120}
+                value={mainConcernExtra}
+                onChange={(e) => setMainConcernExtra(e.target.value)}
+              />
+            </div>
           </label>
 
           <label className="block space-y-1.5">
@@ -226,6 +285,7 @@ export function ProfileForm() {
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">当前最想优先解决的问题</span>
             <Input
               placeholder="如：先稳定敏感，再改善痘印"
+              maxLength={80}
               value={form.priorityGoal}
               onChange={(e) => setForm((p) => ({ ...p, priorityGoal: e.target.value }))}
             />

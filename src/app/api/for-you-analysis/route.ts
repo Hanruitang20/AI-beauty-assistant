@@ -48,23 +48,24 @@ function sleep(ms: number) {
 function getResponseValidationHint(input: unknown): string {
   if (!input || typeof input !== "object") return "response is not an object";
   const obj = input as Record<string, unknown>;
-  if (typeof obj.summary !== "string") return "summary is missing or not a string";
-  if (!Array.isArray(obj.insights)) return "insights is missing or not an array";
-  if (!obj.suggestedNextAction || typeof obj.suggestedNextAction !== "object") {
-    return "suggestedNextAction is missing or not an object";
+  if (!Array.isArray(obj.currentRecommendations)) return "currentRecommendations is missing or not an array";
+  if (!Array.isArray(obj.futureTips)) return "futureTips is missing or not an array";
+  const validAdaptations = ["推荐", "谨慎", "不推荐"];
+  for (let i = 0; i < obj.currentRecommendations.length; i += 1) {
+    const item = obj.currentRecommendations[i] as Record<string, unknown>;
+    if (!item || typeof item !== "object") return `currentRecommendations[${i}] is not an object`;
+    if (typeof item.title !== "string") return `currentRecommendations[${i}].title is missing or not a string`;
+    if (typeof item.reason !== "string") return `currentRecommendations[${i}].reason is missing or not a string`;
+    if (typeof item.nextStep !== "string") return `currentRecommendations[${i}].nextStep is missing or not a string`;
+    if (typeof item.product !== "string") return `currentRecommendations[${i}].product is missing or not a string`;
+    if (!validAdaptations.includes(String(item.adaptation))) return `currentRecommendations[${i}].adaptation is missing or invalid`;
   }
-  const action = obj.suggestedNextAction as Record<string, unknown>;
-  if (typeof action.label !== "string") return "suggestedNextAction.label is missing or not a string";
-  const validTargets = ["profile", "product_detail", "add_product", "continue_tracking"];
-  if (!validTargets.includes(String(action.target))) return "suggestedNextAction.target is missing or invalid";
-  const validInsightTypes = ["positive", "caution", "observation", "missing_info"];
-  for (let i = 0; i < obj.insights.length; i += 1) {
-    const insight = obj.insights[i] as Record<string, unknown>;
-    if (!insight || typeof insight !== "object") return `insights[${i}] is not an object`;
-    if (typeof insight.title !== "string") return `insights[${i}].title is missing or not a string`;
-    if (typeof insight.reason !== "string") return `insights[${i}].reason is missing or not a string`;
-    if (typeof insight.nextStep !== "string") return `insights[${i}].nextStep is missing or not a string`;
-    if (!validInsightTypes.includes(String(insight.type))) return `insights[${i}].type is missing or invalid`;
+  for (let i = 0; i < obj.futureTips.length; i += 1) {
+    const item = obj.futureTips[i] as Record<string, unknown>;
+    if (!item || typeof item !== "object") return `futureTips[${i}] is not an object`;
+    if (typeof item.title !== "string") return `futureTips[${i}].title is missing or not a string`;
+    if (typeof item.reason !== "string") return `futureTips[${i}].reason is missing or not a string`;
+    if (typeof item.nextStep !== "string") return `futureTips[${i}].nextStep is missing or not a string`;
   }
   return "unknown schema mismatch";
 }

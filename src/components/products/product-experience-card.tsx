@@ -73,6 +73,20 @@ export function ProductExperienceCard({
     return value;
   }
 
+  function parseSelectedReactions(value?: ProductReaction) {
+    if (!value) return [];
+    const normalized = value === "none" ? "no_issue" : value;
+    return String(normalized)
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) as ProductReaction[];
+  }
+
+  function serializeSelectedReactions(values: ProductReaction[]) {
+    if (!values.length) return undefined;
+    return values.join(",") as ProductReaction;
+  }
+
   function handleFeedbackNoteSave() {
     const normalized = feedbackNoteDraft.trim();
     const current = (experience?.feedbackNote || "").trim();
@@ -115,7 +129,12 @@ export function ProductExperienceCard({
         selected={experience?.usageFrequency}
         onSelect={(value) => void updateExperience({ usageFrequency: value })}
       />
-      <ExperienceChips title="使用反馈" options={feedbackOptions} selected={normalizeSelectedReaction(experience?.reaction)} onSelect={(value) => void updateExperience({ reaction: value })} />
+      <MultiSelectExperienceChips
+        title="使用反馈（最多选 3 项）"
+        options={feedbackOptions}
+        selected={parseSelectedReactions(normalizeSelectedReaction(experience?.reaction))}
+        onSelect={(values) => void updateExperience({ reaction: serializeSelectedReactions(values) })}
+      />
       <ExperienceChips
         title="后续意愿"
         options={intentionOptions}
@@ -141,6 +160,52 @@ export function ProductExperienceCard({
         />
       </div>
     </Card>
+  );
+}
+
+function MultiSelectExperienceChips<T extends string>({
+  title,
+  options,
+  selected,
+  onSelect,
+}: {
+  title: string;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  selected: T[];
+  onSelect: (values: T[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{title}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const active = selected.includes(option.value);
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                if (active) {
+                  onSelect(selected.filter((item) => item !== option.value));
+                  return;
+                }
+                if (selected.length >= 3) return;
+                onSelect([...selected, option.value]);
+              }}
+              className={[
+                "h-8 rounded-full border px-3 text-xs font-medium transition-colors",
+                active
+                  ? "bg-[var(--accent)] text-white"
+                  : "bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-soft)]",
+              ].join(" ")}
+              style={{ borderColor: active ? "var(--accent)" : "var(--border-soft)" }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

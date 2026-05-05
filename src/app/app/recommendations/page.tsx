@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FeedbackState } from "@/components/ui/feedback-state";
+import { CURRENT_AUTH_PROVIDER } from "@/lib/auth/auth-service";
+import { CURRENT_DATA_SOURCE_MODE } from "@/lib/data-source";
 import { BeautyProduct } from "@/lib/products";
 import { PRODUCT_PRIMARY_CATEGORIES, ProductPrimaryCategory } from "@/lib/product-categories";
 import { buildRecommendationViewModel, RecommendationInsight } from "@/lib/recommendation-service";
@@ -12,7 +14,10 @@ import { appendReturnTo } from "@/lib/navigation";
 import { getExperiencesByProductIdsAsync, ProductExperience } from "@/lib/product-experience-service";
 import { getProductsAsync } from "@/lib/product-service";
 import { getProfileAsync, getProfileDraftAsync } from "@/lib/profile-service";
+import { getCurrentUserAsync } from "@/lib/auth-service";
 import type { ForYouAnalysisRequest, ForYouAnalysisResponse } from "@/lib/llm/for-you-schema";
+import { evaluateForYouAnalysisQuality, storeForYouLlmQualityMetrics } from "@/lib/llm/for-you-evaluator";
+import { FOR_YOU_PROMPT_VERSION } from "@/lib/llm/for-you-prompt";
 
 export default function RecommendationsPage() {
   const [savedProfile, setSavedProfile] = useState<Awaited<ReturnType<typeof getProfileAsync>>>(null);
@@ -42,12 +47,24 @@ export default function RecommendationsPage() {
       setLoading(true);
       setError(null);
       try {
-        const [nextProducts, nextProfile, nextProfileDraft] = await Promise.all([
+        const [nextProducts, nextProfile, nextProfileDraft, currentUser] = await Promise.all([
           getProductsAsync(),
           getProfileAsync(),
           getProfileDraftAsync(),
+          getCurrentUserAsync().catch(() => null),
         ]);
         if (!active) return;
+
+        if (CURRENT_DATA_SOURCE_MODE === "remote" && !currentUser) {
+          setProducts([]);
+          setSavedProfile(null);
+          setProfileDraft(null);
+          setExperiencesByProductId({});
+          if (process.env.NODE_ENV !== "production") {
+            console.info("[ForYouDiagnostics] no auth user in remote mode, skip user-scoped reads.");
+          }
+          return;
+        }
 
         setProducts(nextProducts);
         setSavedProfile(nextProfile);
@@ -56,6 +73,33 @@ export default function RecommendationsPage() {
         const nextExperiences = await getExperiencesByProductIdsAsync(nextProducts.map((product) => product.id));
         if (!active) return;
         setExperiencesByProductId(nextExperiences);
+
+        if (process.env.NODE_ENV !== "production") {
+          const hasAuthUser = Boolean(currentUser);
+          const userId = currentUser?.id || null;
+          const userEmail = currentUser?.email || null;
+          const profileExists = Boolean(nextProfile);
+          const productsCount = nextProducts.length;
+          const experiencesCount = Object.keys(nextExperiences).length;
+          console.info("[ForYouDiagnostics] source snapshot", {
+            authProvider: CURRENT_AUTH_PROVIDER,
+            dataSource: CURRENT_DATA_SOURCE_MODE,
+            hasAuthUser,
+            userId,
+            userEmail,
+            profileExists,
+            productsCount,
+            productExperiencesCount: experiencesCount,
+          });
+          if (
+            CURRENT_DATA_SOURCE_MODE === "remote" &&
+            hasAuthUser &&
+            productsCount === 0 &&
+            experiencesCount === 0
+          ) {
+            console.info("当前 remote 用户暂无测试数据，请在该账号下添加产品和体验记录。");
+          }
+        }
       } catch {
         if (!active) return;
         setError("推荐数据加载失败，请稍后重试。");
@@ -81,13 +125,6 @@ export default function RecommendationsPage() {
   });
 
   const llmPayload = useMemo<ForYouAnalysisRequest>(() => {
-    const stableProducts = products.map((item) => ({
-      id: item.id,
-      name: item.name,
-      brand: item.brand || undefined,
-      category: item.category,
-      status: item.status,
-    }));
     const stableExperiences = Object.values(experiencesByProductId)
       .map((item) => ({
         productId: item.productId,
@@ -98,13 +135,69 @@ export default function RecommendationsPage() {
         feedbackNote: item.feedbackNote,
       }))
       .sort((a, b) => a.productId.localeCompare(b.productId));
+    const experiencesById = stableExperiences.reduce<Record<string, (typeof stableExperiences)[number]>>((acc, item) => {
+      acc[item.productId] = item;
+      return acc;
+    }, {});
+    const stableProducts = products.map((item) => {
+      const experience = experiencesById[item.id];
+      const experienceTags = String(experience?.reaction || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+      return {
+        id: item.id,
+        name: item.name,
+        brand: item.brand || undefined,
+        category: item.category,
+        status: item.status,
+        subcategory: item.categoryType === "custom" ? item.category : undefined,
+        rating: experience?.rating,
+        usageFrequency: experience?.usageFrequency,
+        experienceTags: experienceTags.length > 0 ? experienceTags : undefined,
+        repurchaseIntention: experience?.intention === "repurchase" ? "repurchase" : undefined,
+        futureIntention: experience?.intention || undefined,
+        personalNote: item.note || experience?.feedbackNote || undefined,
+        createdAt: undefined,
+        addedAt: undefined,
+      };
+    });
+    const categoryDistribution = stableProducts.reduce<Record<string, number>>((acc, item) => {
+      acc[item.category] = (acc[item.category] || 0) + 1;
+      return acc;
+    }, {});
+    const negativeTags = new Set([
+      "irritating_or_breakout",
+      "stinging_or_redness",
+      "clogging_or_breakout",
+      "too_oily_or_heavy",
+      "dry_or_tight",
+      "uncomfortable",
+      "unclear_effect",
+    ]);
+    const productsWithLowRating = stableProducts.filter((item) => typeof item.rating === "number" && (item.rating || 0) <= 2).map((item) => item.id);
+    const productsWithHighRating = stableProducts.filter((item) => typeof item.rating === "number" && (item.rating || 0) >= 4).map((item) => item.id);
+    const productsMarkedNotRepurchase = stableProducts
+      .filter((item) => item.futureIntention === "stop")
+      .map((item) => item.id);
+    const productsWithNegativeFeedback = stableProducts
+      .filter((item) => (item.experienceTags || []).some((tag) => negativeTags.has(tag)))
+      .map((item) => item.id);
     return {
-      profile: savedProfile
+      userProfile: savedProfile
         ? {
             skinType: savedProfile.skinType || undefined,
             mainConcerns: savedProfile.mainConcerns || undefined,
             sensitivityLevel: savedProfile.sensitivityLevel || undefined,
             experienceLevel: savedProfile.experienceLevel || undefined,
+            hasRoutine: savedProfile.hasRoutine || undefined,
+            priorityGoal: savedProfile.priorityGoal || undefined,
+            primaryFocus: savedProfile.primaryFocus || undefined,
+            skincareFamiliarity: savedProfile.skincareFamiliarity || undefined,
+            preferredBrands: savedProfile.preferredBrands?.length ? savedProfile.preferredBrands : undefined,
+            dislikedBrands: savedProfile.dislikedBrands?.length ? savedProfile.dislikedBrands : undefined,
+            routineGoal: savedProfile.priorityGoal || undefined,
+            budgetPreference: undefined,
           }
         : null,
       products: stableProducts,
@@ -113,11 +206,43 @@ export default function RecommendationsPage() {
         selectedCategory: analysisCategory,
         productCount: stableProducts.length,
         experienceCount: stableExperiences.length,
+        totalProductCount: stableProducts.length,
+        categoryDistribution,
+        productsWithLowRating,
+        productsMarkedNotRepurchase,
+        productsWithNegativeFeedback,
+        productsWithHighRating,
       },
     };
   }, [products, experiencesByProductId, savedProfile, analysisCategory]);
 
   const payloadKey = useMemo(() => JSON.stringify(llmPayload), [llmPayload]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const context = llmPayload.context;
+    if (!context) {
+      console.info("[ForYouDiagnostics] llmPayload summary", {
+        authProvider: CURRENT_AUTH_PROVIDER,
+        dataSource: CURRENT_DATA_SOURCE_MODE,
+        hasUserProfile: Boolean(llmPayload.userProfile),
+        productCount: 0,
+        experienceCount: 0,
+      });
+      return;
+    }
+    const summary = {
+      authProvider: CURRENT_AUTH_PROVIDER,
+      dataSource: CURRENT_DATA_SOURCE_MODE,
+      selectedCategory: context.selectedCategory,
+      productCount: context.productCount,
+      experienceCount: context.experienceCount,
+      hasUserProfile: Boolean(llmPayload.userProfile),
+      lowRatingCount: context.productsWithLowRating?.length || 0,
+      negativeFeedbackCount: context.productsWithNegativeFeedback?.length || 0,
+    };
+    console.info("[ForYouDiagnostics] llmPayload summary", summary);
+  }, [llmPayload]);
 
   useEffect(() => {
     if (loading || error) return;
@@ -159,9 +284,47 @@ export default function RecommendationsPage() {
         lastSuccessfulPayloadKeyRef.current = payloadKey;
         setLlmAnalysis(data);
         setLlmError(null);
+        const metrics = evaluateForYouAnalysisQuality({
+          request: llmPayload,
+          response: data,
+          promptVersion: FOR_YOU_PROMPT_VERSION,
+          isFallback: false,
+        });
+        storeForYouLlmQualityMetrics(metrics);
+        if (process.env.NODE_ENV !== "production") {
+          console.info("[ForYouDiagnostics] llm metrics summary", {
+            authProvider: CURRENT_AUTH_PROVIDER,
+            dataSource: CURRENT_DATA_SOURCE_MODE,
+            fallbackUsed: metrics.fallbackUsed,
+            overallScore: metrics.overallScore,
+            groundednessScore: metrics.groundednessScore,
+            personalizationScore: metrics.personalizationScore,
+            actionabilityScore: metrics.actionabilityScore,
+            safetyRisk: metrics.safetyRisk,
+          });
+        }
       } catch (fetchError: unknown) {
         if (!active || requestId !== llmRequestSeqRef.current) return;
         if ((fetchError as Error)?.name === "AbortError") return;
+        const fallbackMetrics = evaluateForYouAnalysisQuality({
+          request: llmPayload,
+          response: null,
+          promptVersion: FOR_YOU_PROMPT_VERSION,
+          isFallback: true,
+        });
+        storeForYouLlmQualityMetrics(fallbackMetrics);
+        if (process.env.NODE_ENV !== "production") {
+          console.info("[ForYouDiagnostics] llm metrics summary", {
+            authProvider: CURRENT_AUTH_PROVIDER,
+            dataSource: CURRENT_DATA_SOURCE_MODE,
+            fallbackUsed: fallbackMetrics.fallbackUsed,
+            overallScore: fallbackMetrics.overallScore,
+            groundednessScore: fallbackMetrics.groundednessScore,
+            personalizationScore: fallbackMetrics.personalizationScore,
+            actionabilityScore: fallbackMetrics.actionabilityScore,
+            safetyRisk: fallbackMetrics.safetyRisk,
+          });
+        }
         if (!llmAnalysisRef.current && !lastSuccessfulPayloadKeyRef.current) {
           setLlmError("AI 分析暂时不可用，已先根据你的记录生成基础分析。");
         }
@@ -189,18 +352,14 @@ export default function RecommendationsPage() {
   ]);
 
   const fallbackInsights = recommendationView.scopedInsights;
-  const llmInsights: RecommendationInsight[] = (llmAnalysis?.insights || []).map((item) => ({
+  const llmInsights: RecommendationInsight[] = (llmAnalysis?.currentRecommendations || []).map((item) => ({
     title: item.title,
     reason: item.reason,
     nextStep: item.nextStep,
   }));
   const effectiveInsights = llmInsights.length > 0 ? llmInsights : fallbackInsights;
-  const llmSummary = llmAnalysis?.summary?.trim() || "";
-  const llmCaution = llmAnalysis?.caution?.trim() || "";
-  const llmActionHref = resolveSuggestedActionHref(
-    llmAnalysis?.suggestedNextAction?.target,
-    recommendationView.scopedProducts[0]?.id,
-  );
+  const llmCurrentRecommendations = llmAnalysis?.currentRecommendations || [];
+  const llmFutureTips = llmAnalysis?.futureTips || [];
 
   if (loading) {
     return (
@@ -283,17 +442,10 @@ export default function RecommendationsPage() {
           </div>
           {isLlmLoading ? <FeedbackState>正在整理你的护肤记录...</FeedbackState> : null}
           {llmError && !llmAnalysis ? <p className="text-xs text-[var(--text-muted)]">{llmError}</p> : null}
-          {llmSummary ? (
-            <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
-              <p className="text-sm text-[var(--foreground)]">{llmSummary}</p>
-            </div>
+          {llmCurrentRecommendations.length > 0 ? (
+            <LlmCurrentRecommendationsList items={llmCurrentRecommendations} />
           ) : null}
-          {llmCaution ? <p className="text-xs text-[var(--text-muted)]">提醒：{llmCaution}</p> : null}
-          {llmAnalysis?.suggestedNextAction?.label && llmActionHref ? (
-            <Link href={llmActionHref}>
-              <Button variant="secondary" className="w-full">{llmAnalysis.suggestedNextAction.label}</Button>
-            </Link>
-          ) : null}
+          {llmFutureTips.length > 0 ? <LlmFutureTipsList items={llmFutureTips} /> : null}
           <p className="text-sm text-[var(--foreground)]">
             目前可先基于你的产品记录做护肤方向整理；补充肤质、敏感程度和主要诉求后，分析会更贴近你的实际耐受与目标。
           </p>
@@ -339,17 +491,8 @@ export default function RecommendationsPage() {
         </div>
         {isLlmLoading ? <FeedbackState>正在整理你的护肤记录...</FeedbackState> : null}
         {llmError && !llmAnalysis ? <p className="text-xs text-[var(--text-muted)]">{llmError}</p> : null}
-        {llmSummary ? (
-          <div className="rounded-2xl bg-[var(--surface-soft)] p-3">
-            <p className="text-sm text-[var(--foreground)]">{llmSummary}</p>
-          </div>
-        ) : null}
-        {llmCaution ? <p className="text-xs text-[var(--text-muted)]">提醒：{llmCaution}</p> : null}
-        {llmAnalysis?.suggestedNextAction?.label && llmActionHref ? (
-          <Link href={llmActionHref}>
-            <Button variant="secondary" className="w-full">{llmAnalysis.suggestedNextAction.label}</Button>
-          </Link>
-        ) : null}
+        {llmCurrentRecommendations.length > 0 ? <LlmCurrentRecommendationsList items={llmCurrentRecommendations} /> : null}
+        {llmFutureTips.length > 0 ? <LlmFutureTipsList items={llmFutureTips} /> : null}
         <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
         <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={effectiveInsights} />
       </Card>
@@ -487,14 +630,44 @@ function InsightsList({ insights }: { insights: RecommendationInsight[] }) {
   );
 }
 
-function resolveSuggestedActionHref(
-  target: ForYouAnalysisResponse["suggestedNextAction"]["target"] | undefined,
-  firstScopedProductId?: string,
-) {
-  if (!target) return null;
-  if (target === "profile") return "/app/profile";
-  if (target === "add_product") return "/app/products/new";
-  if (target === "continue_tracking") return "/app/products";
-  if (target === "product_detail") return firstScopedProductId ? `/app/products/${firstScopedProductId}` : "/app/products";
-  return null;
+function LlmCurrentRecommendationsList({
+  items,
+}: {
+  items: ForYouAnalysisResponse["currentRecommendations"];
+}) {
+  return (
+    <div className="grid gap-2">
+      {items.map((item, index) => (
+        <div key={`${item.title}-${index}`} className="rounded-2xl bg-[var(--surface-soft)] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+            <span className="rounded-full border px-2 py-0.5 text-[10px] text-[var(--text-muted)]" style={{ borderColor: "var(--border-soft)" }}>
+              {item.adaptation}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">关联产品：{item.product}</p>
+          <p className="mt-1 text-sm text-[var(--foreground)]">{item.reason}</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：{item.nextStep}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LlmFutureTipsList({
+  items,
+}: {
+  items: ForYouAnalysisResponse["futureTips"];
+}) {
+  return (
+    <div className="grid gap-2">
+      {items.map((item, index) => (
+        <div key={`${item.title}-${index}`} className="rounded-2xl border bg-[var(--surface)] p-3" style={{ borderColor: "var(--border-soft)" }}>
+          <p className="text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+          <p className="mt-1 text-sm text-[var(--foreground)]">{item.reason}</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：{item.nextStep}</p>
+        </div>
+      ))}
+    </div>
+  );
 }

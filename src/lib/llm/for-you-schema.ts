@@ -1,9 +1,17 @@
 export type ForYouAnalysisRequest = {
-  profile: {
+  userProfile: {
     skinType?: string;
     mainConcerns?: string;
     sensitivityLevel?: string;
     experienceLevel?: string;
+    hasRoutine?: string;
+    priorityGoal?: string;
+    primaryFocus?: string;
+    skincareFamiliarity?: string;
+    preferredBrands?: string[];
+    dislikedBrands?: string[];
+    routineGoal?: string;
+    budgetPreference?: string;
   } | null;
   products: Array<{
     id: string;
@@ -11,6 +19,15 @@ export type ForYouAnalysisRequest = {
     brand?: string;
     category: string;
     status: string;
+    subcategory?: string;
+    rating?: number;
+    usageFrequency?: string;
+    experienceTags?: string[];
+    repurchaseIntention?: string;
+    futureIntention?: string;
+    personalNote?: string;
+    createdAt?: string;
+    addedAt?: string;
   }>;
   experiences: Array<{
     productId: string;
@@ -24,22 +41,28 @@ export type ForYouAnalysisRequest = {
     selectedCategory?: string;
     productCount: number;
     experienceCount: number;
+    totalProductCount?: number;
+    categoryDistribution?: Record<string, number>;
+    productsWithLowRating?: string[];
+    productsMarkedNotRepurchase?: string[];
+    productsWithNegativeFeedback?: string[];
+    productsWithHighRating?: string[];
   };
 };
 
 export type ForYouAnalysisResponse = {
-  summary: string;
-  insights: Array<{
+  currentRecommendations: Array<{
     title: string;
     reason: string;
     nextStep: string;
-    type: "positive" | "caution" | "observation" | "missing_info";
+    product: string;
+    adaptation: "推荐" | "谨慎" | "不推荐";
   }>;
-  caution?: string;
-  suggestedNextAction: {
-    label: string;
-    target: "profile" | "product_detail" | "add_product" | "continue_tracking";
-  };
+  futureTips: Array<{
+    title: string;
+    reason: string;
+    nextStep: string;
+  }>;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,7 +72,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function validateForYouAnalysisRequest(input: unknown): input is ForYouAnalysisRequest {
   if (!isRecord(input)) return false;
   if (!Array.isArray(input.products) || !Array.isArray(input.experiences)) return false;
-  if (!(input.profile === null || isRecord(input.profile))) return false;
+  if (!(input.userProfile === null || isRecord(input.userProfile))) return false;
 
   const productsValid = input.products.every((product) => {
     if (!isRecord(product)) return false;
@@ -86,24 +109,27 @@ export function validateForYouAnalysisRequest(input: unknown): input is ForYouAn
 
 export function validateForYouAnalysisResponse(input: unknown): input is ForYouAnalysisResponse {
   if (!isRecord(input)) return false;
-  if (typeof input.summary !== "string") return false;
-  if (!Array.isArray(input.insights)) return false;
-  if (!isRecord(input.suggestedNextAction)) return false;
-  if (typeof input.suggestedNextAction.label !== "string") return false;
+  if (!Array.isArray(input.currentRecommendations)) return false;
+  if (!Array.isArray(input.futureTips)) return false;
 
-  const validTargets = ["profile", "product_detail", "add_product", "continue_tracking"];
-  if (!validTargets.includes(String(input.suggestedNextAction.target))) return false;
-
-  if (typeof input.caution !== "undefined" && typeof input.caution !== "string") return false;
-
-  const validInsightTypes = ["positive", "caution", "observation", "missing_info"];
-  const insightsValid = input.insights.every((insight) => {
-    if (!isRecord(insight)) return false;
-    if (typeof insight.title !== "string") return false;
-    if (typeof insight.reason !== "string") return false;
-    if (typeof insight.nextStep !== "string") return false;
-    if (!validInsightTypes.includes(String(insight.type))) return false;
+  const validAdaptations = ["推荐", "谨慎", "不推荐"];
+  const currentRecommendationsValid = input.currentRecommendations.every((item) => {
+    if (!isRecord(item)) return false;
+    if (typeof item.title !== "string") return false;
+    if (typeof item.reason !== "string") return false;
+    if (typeof item.nextStep !== "string") return false;
+    if (typeof item.product !== "string") return false;
+    if (!validAdaptations.includes(String(item.adaptation))) return false;
     return true;
   });
-  return insightsValid;
+  if (!currentRecommendationsValid) return false;
+
+  const futureTipsValid = input.futureTips.every((item) => {
+    if (!isRecord(item)) return false;
+    if (typeof item.title !== "string") return false;
+    if (typeof item.reason !== "string") return false;
+    if (typeof item.nextStep !== "string") return false;
+    return true;
+  });
+  return futureTipsValid;
 }

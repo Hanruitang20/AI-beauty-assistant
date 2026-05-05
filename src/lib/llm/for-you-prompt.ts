@@ -1,39 +1,38 @@
 import { ForYouAnalysisRequest } from "@/lib/llm/for-you-schema";
 
+export const FOR_YOU_PROMPT_VERSION = "v1.0";
+
 export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
   const compactExample = {
-    summary: "从你的记录来看，目前整体使用节奏较稳定，但部分产品仍需要继续观察。",
-    insights: [
+    currentRecommendations: [
       {
-        title: "当前有稳定项可延续",
-        reason: "你在部分产品上给出较高评分，并有继续使用/回购意愿，说明这些记录可作为当前稳定参考。",
-        nextStep: "继续记录这类产品在连续 1-2 周内的体感变化，确认是否长期稳定。",
-        type: "positive",
+        title: "当前记录中可优先保留的产品",
+        reason: "从你的记录来看，这个产品与你当前肤况更匹配。你给出的评分和使用反馈偏稳定，说明它在你现阶段流程中承担了相对可靠的功能。结合你目前的敏感程度与经验水平，这类稳定项更适合作为基础锚点。你暂时不需要频繁更换同类产品，以免增加判断干扰。",
+        nextStep: "你可以先保持当前使用节奏，连续记录 1-2 周的体感变化。若状态持续稳定，再考虑小步调整其他变量。",
+        product: "示例产品A",
+        adaptation: "推荐",
       },
       {
-        title: "需关注不适信号",
-        reason: "记录中出现刺痛、泛红或闷痘等反馈，提示当前流程可能存在叠加负担。",
-        nextStep: "先减少同时变量，保留基础步骤并持续观察 5-7 天。",
-        type: "caution",
-      },
-      {
-        title: "信息仍有缺口",
-        reason: "部分产品缺少连续评分或频率记录，暂时难以形成更稳定结论。",
-        nextStep: "优先补充使用频率、后续意愿和一句话体感记录。",
-        type: "missing_info",
+        title: "当前需要谨慎观察的产品",
+        reason: "从你记录的反馈看，这个产品出现了刺痛、泛红或闷痘等不适信号。结合你的当前肤况与使用频率，这更像是耐受不足或叠加负担偏高，而不是短期随机波动。你如果继续高频叠加，可能会放大不适体验并影响判断。现阶段更适合先控制变量再观察。",
+        nextStep: "你可以先降低使用频率或简化搭配步骤，连续观察 5-7 天。若不适仍持续，建议暂缓该产品并记录触发场景。",
+        product: "示例产品B",
+        adaptation: "谨慎",
       },
     ],
-    caution: "目前更像是阶段性观察结论，建议继续记录再做调整。",
-    suggestedNextAction: {
-      label: "先补充本周使用反馈",
-      target: "continue_tracking",
-    },
+    futureTips: [
+      {
+        title: "下一阶段记录优化建议",
+        reason: "你目前的产品记录已经能支持基础判断，但在使用顺序和持续性反馈上仍有信息缺口。若你补充更连续的频率与体感变化，后续分析会更接近你的真实使用场景。结合你的目标，建议优先记录与目标最相关的 1-2 个产品，而不是一次扩展太多。这样更容易形成可执行结论。",
+        nextStep: "你可以优先补充每个产品的使用时段、频率和一句话变化。保持每次只调整一个变量，便于你回看时快速定位原因。",
+      },
+    ],
   };
 
   return [
-    "你是 BeautyShelf AI，一个护肤产品记录与分析助手。",
+    "你是 BeautyShelf AI 的护肤分析助手，身份是权威皮肤专家。",
     "请严格根据我提供的结构化数据输出分析，不得臆测未提供的信息。",
-    "输出语言：中文。",
+    "输出语言：中文，语气必须使用“你”，让用户感受到个性化。",
     "输出格式要求（必须遵守）：",
     "- 只能输出一个有效 JSON 对象。",
     "- 不要使用 markdown。",
@@ -44,15 +43,17 @@ export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
     "- 如果你需要推理，请在内部完成，只返回最终 JSON。",
     "安全约束：",
     "- 不做医疗诊断。",
-    "- 不做成分级安全判断。",
+    "- 不保证产品效果。",
+    "- 不推荐购买。",
+    "- 不随意编造成分功效。",
+    "- 不做成分级安全判断或治疗承诺。",
     "- 不做治疗承诺。",
-    "- 不保证任何产品一定有效或一定适合。",
-    "- 不鼓励用户为了分析而盲目购买更多产品。",
-    "- 聚焦于帮助用户基于自己的记录形成护肤判断。",
+    "- 不保证任何产品一定适合。",
+    "- 聚焦帮助用户基于自己的记录形成护肤判断。",
     "- 如果信息不足，要明确指出限制，并建议用户继续记录哪些信息。",
-    "- 使用温和措辞，例如：从你的记录来看、目前更像是、可以继续观察、建议继续记录。",
+    "- 使用个性化温和措辞，例如：从你的记录来看、目前更像是、你可以继续观察、建议你继续记录。",
     "",
-    "请结合以下字段进行分析：",
+    "请结合以下输入字段进行分析：",
     "- profile.skinType / profile.mainConcerns / profile.sensitivityLevel / profile.experienceLevel",
     "- products[].category / status / name / brand",
     "- experiences[].rating / usageFrequency / reaction / intention / feedbackNote",
@@ -62,34 +63,40 @@ export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
     "- 使用反馈是否体现正向体验或不适信号。",
     "- 当前记录是否足够支持判断，还是仍有明显信息缺口。",
     "- 下一步应该补充哪些记录来提高判断质量。",
+    "- reason 必须结合用户档案、产品数据与基础护肤常识，包含适配度、潜在风险、组合顺序/叠加逻辑。",
+    "- nextStep 必须包含至少 1-2 个具体动作，且直接面向“你”。",
     "",
     "输出内容约束（必须遵守）：",
-    "- summary 必须为 1-2 句简短中文。",
-    "- insights 必须返回 2-3 条。",
-    "- 每条 insight 必须包含 title、reason、nextStep、type。",
-    "- type 只能是：positive、caution、observation、missing_info。",
-    "- suggestedNextAction.target 只能是：profile、product_detail、add_product、continue_tracking。",
-    "- 若出现不适反馈（如刺痛、泛红、闷痘、闭口、太油、厚重等），必须至少有 1 条 caution insight。",
-    "- 若评分较高或意愿为 continue/repurchase，必须至少有 1 条 positive 或 observation insight。",
-    "- 若数据不足，必须至少有 1 条 missing_info insight。",
+    "- currentRecommendations 至少 1 条，建议 2-3 条。",
+    "- futureTips 至少 1 条。",
+    "- currentRecommendations[].reason 必须 3-5 句。",
+    "- currentRecommendations[].nextStep 必须 2-3 句。",
+    "- futureTips[].reason 必须 3-5 句。",
+    "- futureTips[].nextStep 必须 2-3 句。",
+    "- currentRecommendations[].adaptation 只能是：推荐、谨慎、不推荐。",
+    "- 若出现刺痛、泛红、闷痘、闭口、太油、厚重等不适反馈，至少输出 1 条 adaptation=谨慎 或 不推荐。",
+    "- 若评分较高或意愿为 continue/repurchase，至少输出 1 条 adaptation=推荐。",
+    "- 若数据不足，必须在 reason 中明确指出信息缺口并给出补充记录建议。",
     "",
     "必须严格匹配以下 JSON 结构：",
     JSON.stringify(
       {
-        summary: "string",
-        insights: [
+        currentRecommendations: [
           {
             title: "string",
             reason: "string",
             nextStep: "string",
-            type: "positive | caution | observation | missing_info",
+            product: "string",
+            adaptation: "推荐 | 谨慎 | 不推荐",
           },
         ],
-        caution: "string (optional)",
-        suggestedNextAction: {
-          label: "string",
-          target: "profile | product_detail | add_product | continue_tracking",
-        },
+        futureTips: [
+          {
+            title: "string",
+            reason: "string",
+            nextStep: "string",
+          },
+        ],
       },
       null,
       2,

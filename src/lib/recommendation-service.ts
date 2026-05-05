@@ -204,7 +204,16 @@ function buildExperienceInsight(input: {
     });
   }
 
-  const reactionSet = new Set(scopedExperiences.map((item) => item.reaction).filter(Boolean));
+  const reactionSet = new Set(
+    scopedExperiences
+      .flatMap((item) =>
+        String(item.reaction || "")
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      )
+      .map((tag) => (tag === "none" ? "no_issue" : tag)),
+  );
   if (
     reactionSet.has("irritating_or_breakout") ||
     reactionSet.has("stinging_or_redness") ||

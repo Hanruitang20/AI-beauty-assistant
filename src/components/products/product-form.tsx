@@ -67,6 +67,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
         <Input
           value={form.productName}
           placeholder="例如：积雪草修护面霜"
+          maxLength={60}
           onChange={(event) => setForm((prev) => ({ ...prev, productName: event.target.value }))}
         />
       </label>
@@ -76,6 +77,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
         <Input
           value={form.brand}
           placeholder="例如：Skin1004"
+          maxLength={40}
           onChange={(event) => setForm((prev) => ({ ...prev, brand: event.target.value }))}
         />
       </label>
@@ -108,6 +110,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
           <Input
             value={form.customCategory}
             placeholder="例如：美容仪 / 香氛 / 医美护理"
+            maxLength={30}
             onChange={(event) => setForm((prev) => ({ ...prev, customCategory: event.target.value }))}
           />
         </label>
@@ -167,6 +170,7 @@ export function ProductForm({ mode, initialValues, onSubmit, submitLabel }: Prod
           rows={4}
           value={form.note}
           placeholder="可记录使用感受、反应或注意事项。"
+          maxLength={150}
           onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
         />
       </label>
