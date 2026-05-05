@@ -6,12 +6,17 @@ import {
   validateForYouAnalysisResponse,
 } from "@/lib/llm/for-you-schema";
 
+export const maxDuration = 60;
+
 const IS_DEV = process.env.NODE_ENV !== "production";
 const MAX_PROVIDER_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 500;
 
-function safeError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+function safeError(message: string, status: number, errorCode?: string) {
+  return NextResponse.json(
+    errorCode ? { error: message, errorCode } : { error: message },
+    { status },
+  );
 }
 
 function parseLlmJson(raw: string): unknown {
@@ -85,14 +90,27 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.MINIMAX_API_KEY;
   const model = process.env.MINIMAX_MODEL;
+  const baseUrl = (process.env.MINIMAX_BASE_URL || "https://api.minimax.io/v1").replace(/\/+$/, "");
+  const timeoutMsRaw = process.env.MINIMAX_TIMEOUT_MS || "60000";
+  const timeoutMs = Number(timeoutMsRaw);
+  const normalizedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 60000;
+  const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || "custom";
+  const dataSource = process.env.NEXT_PUBLIC_DATA_SOURCE || "remote";
+
   if (!apiKey || !model) {
-    return safeError("LLM provider is not configured.", 503);
+    console.error("[ForYouRoute] precheck failed before provider request", {
+      reasonCode: "ERROR_MINIMAX_CONFIG_MISSING",
+      hasMiniMaxApiKey: Boolean(apiKey),
+      hasMiniMaxBaseUrl: Boolean(process.env.MINIMAX_BASE_URL),
+      hasMiniMaxModel: Boolean(model),
+      minimaxTimeoutMs: normalizedTimeoutMs,
+      authProvider,
+      dataSource,
+    });
+    return safeError("LLM provider is not configured.", 503, "ERROR_MINIMAX_CONFIG_MISSING");
   }
 
-  const baseUrl = (process.env.MINIMAX_BASE_URL || "https://api.minimax.io/v1").replace(/\/+$/, "");
   const requestUrl = `${baseUrl}/chat/completions`;
-  const timeoutMs = Number(process.env.FOR_YOU_LLM_TIMEOUT_MS || 8000);
-  const normalizedTimeoutMs = Number.isFinite(timeoutMs) ? timeoutMs : 8000;
 
   if (IS_DEV) {
     console.info("[ForYouLLM] MiniMax request config:", {
@@ -103,13 +121,37 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  let lastProviderRequestStartedAt = 0;
   try {
     const prompt = buildForYouPrompt(input);
     let response: Response | null = null;
     let responseText = "";
     for (let attempt = 1; attempt <= MAX_PROVIDER_ATTEMPTS; attempt += 1) {
+      lastProviderRequestStartedAt = Date.now();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), normalizedTimeoutMs);
+      const requestMeta = (() => {
+        try {
+          const parsed = new URL(requestUrl);
+          return {
+            baseUrlHost: parsed.host,
+            requestUrlPath: parsed.pathname,
+          };
+        } catch {
+          return {
+            baseUrlHost: "invalid_url",
+            requestUrlPath: requestUrl,
+          };
+        }
+      })();
+      console.error("[ForYouRoute] MiniMax request start", {
+        reasonCode: "MINIMAX_REQUEST_START",
+        model,
+        hasApiKey: Boolean(apiKey),
+        baseUrlHost: requestMeta.baseUrlHost,
+        timeoutMs: normalizedTimeoutMs,
+        requestUrlPath: requestMeta.requestUrlPath,
+      });
       try {
         response = await fetch(requestUrl, {
           method: "POST",
@@ -176,11 +218,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!response) {
-      return safeError("LLM provider request failed.", 502);
+      return safeError("LLM provider request failed.", 502, "ERROR_MINIMAX_PROVIDER_UNAVAILABLE");
     }
 
     if (!response.ok) {
-      return safeError("LLM provider request failed.", 502);
+      return safeError("LLM provider request failed.", 502, "ERROR_MINIMAX_PROVIDER_UNAVAILABLE");
     }
 
     let providerJson: { choices?: Array<{ message?: { content?: string } }> };
@@ -234,8 +276,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(parsed);
   } catch (error) {
     if ((error as Error)?.name === "AbortError") {
+      const elapsedMs = lastProviderRequestStartedAt > 0 ? Date.now() - lastProviderRequestStartedAt : null;
+      console.error("[ForYouRoute] MiniMax request timeout", {
+        reasonCode: "MINIMAX_REQUEST_TIMEOUT",
+        timeoutMs: normalizedTimeoutMs,
+        elapsedMs,
+        errorName: (error as Error)?.name || "AbortError",
+        errorMessage: (error as Error)?.message || "AbortError",
+      });
       return safeError("LLM provider request timed out.", 504);
     }
-    return safeError("Failed to generate AI analysis.", 500);
+    console.error("[ForYouRoute] unexpected route failure", {
+      reasonCode: "ERROR_FOR_YOU_ROUTE_PRECHECK_FAILED",
+      hasMiniMaxApiKey: Boolean(process.env.MINIMAX_API_KEY),
+      hasMiniMaxBaseUrl: Boolean(process.env.MINIMAX_BASE_URL),
+      minimaxTimeoutMs: normalizedTimeoutMs,
+      authProvider: process.env.NEXT_PUBLIC_AUTH_PROVIDER || "custom",
+      dataSource: process.env.NEXT_PUBLIC_DATA_SOURCE || "remote",
+      errorName: (error as Error)?.name || "UnknownError",
+      errorMessage: (error as Error)?.message || "Unknown error",
+    });
+    return safeError("Failed to generate AI analysis.", 500, "ERROR_FOR_YOU_ROUTE_PRECHECK_FAILED");
   }
 }
