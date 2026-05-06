@@ -59,7 +59,7 @@ export default function NewProductPage() {
       </div>
 
       <Card className="rounded-[24px]">
-        <ProductForm mode="create" initialValues={initialForm} onSubmit={handleCreate} />
+        <ProductForm mode="create" initialValues={initialForm} onSubmit={handleCreate} submitLayout="inline" />
       </Card>
     </div>
   );

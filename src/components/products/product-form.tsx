@@ -58,7 +58,6 @@ export function ProductForm({
 
     setSaving(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
       await onSubmit(form);
       if (mode === "create") {
         setForm(initialValues);
