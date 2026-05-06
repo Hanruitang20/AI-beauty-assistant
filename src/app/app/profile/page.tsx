@@ -103,6 +103,11 @@ export default function ProfilePage() {
       showToast({ tone: "success", message: "头像已更新。" });
     };
     reader.readAsDataURL(file);
+    event.target.value = "";
+  }
+
+  function openAvatarPicker() {
+    fileInputRef.current?.click();
   }
 
   if (loading) {
@@ -125,24 +130,29 @@ export default function ProfilePage() {
     <div className="space-y-6 pb-6">
       <section className="rounded-[24px] border bg-[var(--surface)] p-5 shadow-[0_4px_16px_rgba(60,53,48,0.04)]" style={{ borderColor: "var(--border-soft)" }}>
         <div className="flex items-center gap-4">
-          <div className="relative">
-            <div className="h-20 w-20 rounded-full border-2 border-[var(--accent)]/30 bg-[var(--surface-soft)] p-1 shadow-sm">
+          <div className="relative inline-flex shrink-0">
+            <button
+              type="button"
+              onClick={openAvatarPicker}
+              aria-label={avatar ? "更换头像" : "上传头像"}
+              className="relative h-20 w-20 rounded-full border-2 border-[var(--accent)]/30 bg-[var(--surface-soft)] p-1 shadow-sm outline-none ring-offset-2 ring-offset-[var(--surface)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            >
               {avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatar} alt="用户头像" className="h-full w-full rounded-full object-cover" />
+                <img src={avatar} alt="" className="pointer-events-none h-full w-full rounded-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center rounded-full bg-[var(--surface)] text-lg font-semibold text-[var(--accent)]">
+                <div className="pointer-events-none flex h-full w-full items-center justify-center rounded-full bg-[var(--surface)] text-lg font-semibold text-[var(--accent)]">
                   {(user?.name || "用户").slice(0, 2).toUpperCase()}
                 </div>
               )}
-            </div>
-            <button
-              type="button"
-              className="absolute bottom-0 right-0 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-sm"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="更换头像"
-            >
-              ✎
+              {!avatar ? (
+                <span
+                  className="pointer-events-none absolute bottom-0 right-0 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[var(--accent)] text-[10px] leading-none text-white shadow-sm"
+                  aria-hidden
+                >
+                  ✎
+                </span>
+              ) : null}
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} />
           </div>
