@@ -41,7 +41,7 @@ export type ForYouAnalysisRequest = {
     name: string;
     brand: string;
     category: string;
-    matchReason: string;
+    reason: string;
     caution: string;
     howToTry: string;
   }>;
@@ -129,7 +129,7 @@ export function validateForYouAnalysisRequest(input: unknown): input is ForYouAn
       if (typeof candidate.name !== "string") return false;
       if (typeof candidate.brand !== "string") return false;
       if (typeof candidate.category !== "string") return false;
-      if (typeof candidate.matchReason !== "string") return false;
+      if (typeof candidate.reason !== "string") return false;
       if (typeof candidate.caution !== "string") return false;
       if (typeof candidate.howToTry !== "string") return false;
       return true;

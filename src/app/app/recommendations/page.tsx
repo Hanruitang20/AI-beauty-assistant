@@ -204,7 +204,14 @@ export default function RecommendationsPage() {
         : null,
       products: stableProducts,
       experiences: stableExperiences,
-      productMatchCandidates: productMatch.candidates,
+      productMatchCandidates: productMatch.candidates.map((item) => ({
+        name: item.name,
+        brand: item.brand,
+        category: item.category,
+        reason: item.matchReason,
+        caution: item.caution,
+        howToTry: item.howToTry,
+      })),
       productMatchHint: {
         shouldFocusOnExistingProducts: productMatch.shouldFocusOnExistingProducts,
         fallbackTip: productMatch.fallbackTip,

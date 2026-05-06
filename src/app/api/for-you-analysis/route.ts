@@ -109,9 +109,12 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.MINIMAX_API_KEY;
   const model = process.env.MINIMAX_MODEL;
   const baseUrl = (process.env.MINIMAX_BASE_URL || "https://api.minimax.io/v1").replace(/\/+$/, "");
-  const timeoutMsRaw = process.env.MINIMAX_TIMEOUT_MS || "60000";
+  const timeoutMsRaw = process.env.MINIMAX_TIMEOUT_MS || "55000";
   const timeoutMs = Number(timeoutMsRaw);
-  const normalizedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 60000;
+  const normalizedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 55000;
+  const maxTokensRaw = process.env.MINIMAX_MAX_TOKENS || "900";
+  const parsedMaxTokens = Number(maxTokensRaw);
+  const normalizedMaxTokens = Number.isFinite(parsedMaxTokens) && parsedMaxTokens > 0 ? Math.floor(parsedMaxTokens) : 900;
   const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || "custom";
   const dataSource = process.env.NEXT_PUBLIC_DATA_SOURCE || "remote";
 
@@ -162,12 +165,13 @@ export async function POST(request: NextRequest) {
           };
         }
       })();
-      console.error("[ForYouRoute] MiniMax request start", {
+      console.info("[ForYouRoute] MiniMax request start", {
         reasonCode: "MINIMAX_REQUEST_START",
         model,
         hasApiKey: Boolean(apiKey),
         baseUrlHost: requestMeta.baseUrlHost,
         timeoutMs: normalizedTimeoutMs,
+        maxTokens: normalizedMaxTokens,
         requestUrlPath: requestMeta.requestUrlPath,
       });
       try {
@@ -184,6 +188,7 @@ export async function POST(request: NextRequest) {
               { role: "user", content: prompt },
             ],
             temperature: 0.4,
+            max_tokens: normalizedMaxTokens,
           }),
           signal: controller.signal,
         });
@@ -236,10 +241,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (!response) {
+      console.error("[ForYouRoute] MiniMax fetch failed without response", {
+        reasonCode: "ERROR_MINIMAX_PROVIDER_UNAVAILABLE",
+      });
       return safeError("LLM provider request failed.", 502, "ERROR_MINIMAX_PROVIDER_UNAVAILABLE");
     }
 
     if (!response.ok) {
+      console.error("[ForYouRoute] MiniMax response not ok", {
+        reasonCode: "ERROR_MINIMAX_PROVIDER_UNAVAILABLE",
+        status: response.status,
+      });
       return safeError("LLM provider request failed.", 502, "ERROR_MINIMAX_PROVIDER_UNAVAILABLE");
     }
 

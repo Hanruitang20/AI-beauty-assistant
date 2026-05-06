@@ -49,7 +49,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME?schema=public
 AUTH_SESSION_SECRET=replace-with-at-least-32-char-random-string
 MINIMAX_API_KEY=replace-with-your-minimax-key
 MINIMAX_BASE_URL=https://api.minimaxi.com/v1
-MINIMAX_TIMEOUT_MS=60000
+MINIMAX_TIMEOUT_MS=55000
 ```
 
 ### 4) 初始化数据库（MVP）
