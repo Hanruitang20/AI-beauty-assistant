@@ -18,6 +18,7 @@ import { getCurrentUserAsync } from "@/lib/auth-service";
 import type { ForYouAnalysisRequest, ForYouAnalysisResponse } from "@/lib/llm/for-you-schema";
 import { evaluateForYouAnalysisQuality, storeForYouLlmQualityMetrics } from "@/lib/llm/for-you-evaluator";
 import { FOR_YOU_PROMPT_VERSION } from "@/lib/llm/for-you-prompt";
+import { matchProductCandidates } from "@/lib/product-knowledge/match-products";
 
 export default function RecommendationsPage() {
   const [savedProfile, setSavedProfile] = useState<Awaited<ReturnType<typeof getProfileAsync>>>(null);
@@ -183,6 +184,7 @@ export default function RecommendationsPage() {
     const productsWithNegativeFeedback = stableProducts
       .filter((item) => (item.experienceTags || []).some((tag) => negativeTags.has(tag)))
       .map((item) => item.id);
+    const productMatch = matchProductCandidates(savedProfile, products, { topK: 3 });
     return {
       userProfile: savedProfile
         ? {
@@ -202,6 +204,11 @@ export default function RecommendationsPage() {
         : null,
       products: stableProducts,
       experiences: stableExperiences,
+      productMatchCandidates: productMatch.candidates,
+      productMatchHint: {
+        shouldFocusOnExistingProducts: productMatch.shouldFocusOnExistingProducts,
+        fallbackTip: productMatch.fallbackTip,
+      },
       context: {
         selectedCategory: analysisCategory,
         productCount: stableProducts.length,
@@ -360,6 +367,29 @@ export default function RecommendationsPage() {
   const effectiveInsights = llmInsights.length > 0 ? llmInsights : fallbackInsights;
   const llmCurrentRecommendations = llmAnalysis?.currentRecommendations || [];
   const llmFutureTips = llmAnalysis?.futureTips || [];
+  const llmProductMatch = useMemo(() => {
+    const productMatch = llmAnalysis?.productMatch;
+    if (!productMatch) return null;
+
+    const whitelist = new Set(
+      (llmPayload.productMatchCandidates || []).map((item) => `${item.name.trim().toLowerCase()}::${item.brand.trim().toLowerCase()}`),
+    );
+    const hasRawCandidates = productMatch.candidates.length > 0;
+    const filteredCandidates = productMatch.candidates.filter((item) =>
+      whitelist.has(`${item.name.trim().toLowerCase()}::${item.brand.trim().toLowerCase()}`),
+    );
+    const fallbackTip =
+      productMatch.fallbackTip ||
+      (hasRawCandidates && filteredCandidates.length === 0
+        ? "暂时没有可展示的候选产品，建议你先补充已有产品的使用体验。"
+        : undefined);
+
+    return {
+      ...productMatch,
+      candidates: filteredCandidates,
+      fallbackTip,
+    };
+  }, [llmAnalysis, llmPayload.productMatchCandidates]);
 
   if (loading) {
     return (
@@ -446,6 +476,7 @@ export default function RecommendationsPage() {
             <LlmCurrentRecommendationsList items={llmCurrentRecommendations} />
           ) : null}
           {llmFutureTips.length > 0 ? <LlmFutureTipsList items={llmFutureTips} /> : null}
+          {llmProductMatch ? <LlmProductMatchCard productMatch={llmProductMatch} /> : null}
           <p className="text-sm text-[var(--foreground)]">
             目前可先基于你的产品记录做护肤方向整理；补充肤质、敏感程度和主要诉求后，分析会更贴近你的实际耐受与目标。
           </p>
@@ -493,6 +524,7 @@ export default function RecommendationsPage() {
         {llmError && !llmAnalysis ? <p className="text-xs text-[var(--text-muted)]">{llmError}</p> : null}
         {llmCurrentRecommendations.length > 0 ? <LlmCurrentRecommendationsList items={llmCurrentRecommendations} /> : null}
         {llmFutureTips.length > 0 ? <LlmFutureTipsList items={llmFutureTips} /> : null}
+        {llmProductMatch ? <LlmProductMatchCard productMatch={llmProductMatch} /> : null}
         <CategoryChips selected={analysisCategory} onChange={setAnalysisCategory} />
         <ScopedAnalysisBody products={recommendationView.scopedProducts} insights={effectiveInsights} />
       </Card>
@@ -668,6 +700,36 @@ function LlmFutureTipsList({
           <p className="mt-1 text-xs text-[var(--text-muted)]">下一步：{item.nextStep}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+function LlmProductMatchCard({
+  productMatch,
+}: {
+  productMatch: ForYouAnalysisResponse["productMatch"];
+}) {
+  return (
+    <div className="rounded-2xl border bg-[var(--surface)] p-3" style={{ borderColor: "var(--border-soft)" }}>
+      <p className="text-sm font-semibold text-[var(--foreground)]">{productMatch.title}</p>
+      <p className="mt-1 text-sm text-[var(--foreground)]">{productMatch.reason}</p>
+      {productMatch.candidates.length > 0 ? (
+        <div className="mt-2 grid gap-2">
+          {productMatch.candidates.map((item, index) => (
+            <div key={`${item.name}-${index}`} className="rounded-xl bg-[var(--surface-soft)] p-3">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                {item.name} · {item.brand}
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">品类：{item.category}</p>
+              <p className="mt-1 text-sm text-[var(--foreground)]">{item.matchReason}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">注意：{item.caution}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">试用建议：{item.howToTry}</p>
+            </div>
+          ))}
+        </div>
+      ) : productMatch.fallbackTip ? (
+        <p className="mt-2 text-xs text-[var(--text-muted)]">{productMatch.fallbackTip}</p>
+      ) : null}
     </div>
   );
 }

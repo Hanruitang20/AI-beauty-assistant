@@ -1,6 +1,6 @@
 import { ForYouAnalysisRequest } from "@/lib/llm/for-you-schema";
 
-export const FOR_YOU_PROMPT_VERSION = "v1.0";
+export const FOR_YOU_PROMPT_VERSION = "v1.1";
 
 export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
   const compactExample = {
@@ -27,6 +27,20 @@ export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
         nextStep: "你可以优先补充每个产品的使用时段、频率和一句话变化。保持每次只调整一个变量，便于你回看时快速定位原因。",
       },
     ],
+    productMatch: {
+      title: "候选产品参考（补充信息）",
+      reason: "这些候选仅用于补充参考，帮助你完善当前护理结构，不等同于购买建议。",
+      candidates: [
+        {
+          name: "示例清爽保湿乳液",
+          brand: "示例品牌",
+          category: "moisturizer",
+          matchReason: "与你当前的出油情况和基础保湿需求更匹配，可作为低风险补充候选。",
+          caution: "若你近期有明显刺痛或泛红，建议先减少变量后再尝试。",
+          howToTry: "先晚间薄涂 5-7 天，确认稳定后再决定是否日间加入。",
+        },
+      ],
+    },
   };
 
   return [
@@ -54,9 +68,11 @@ export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
     "- 使用个性化温和措辞，例如：从你的记录来看、目前更像是、你可以继续观察、建议你继续记录。",
     "",
     "请结合以下输入字段进行分析：",
-    "- profile.skinType / profile.mainConcerns / profile.sensitivityLevel / profile.experienceLevel",
+    "- userProfile.skinType / userProfile.mainConcerns / userProfile.sensitivityLevel / userProfile.experienceLevel",
     "- products[].category / status / name / brand",
     "- experiences[].rating / usageFrequency / reaction / intention / feedbackNote",
+    "- productMatchCandidates[]（仅作为候选补充信息来源）",
+    "- productMatchHint.shouldFocusOnExistingProducts / productMatchHint.fallbackTip",
     "",
     "分析重点（必须覆盖）：",
     "- 当前记录中哪些产品状态更像稳定、哪些仍不确定、哪些需要谨慎观察。",
@@ -77,6 +93,12 @@ export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
     "- 若出现刺痛、泛红、闷痘、闭口、太油、厚重等不适反馈，至少输出 1 条 adaptation=谨慎 或 不推荐。",
     "- 若评分较高或意愿为 continue/repurchase，至少输出 1 条 adaptation=推荐。",
     "- 若数据不足，必须在 reason 中明确指出信息缺口并给出补充记录建议。",
+    "- productMatch 只作为补充信息，不要覆盖 currentRecommendations 与 futureTips 的主逻辑。",
+    "- productMatch 是候选产品参考，不是购买推荐。",
+    "- productMatch.candidates 必须只来自输入中的 productMatchCandidates。",
+    "- 不允许编造 productMatchCandidates 之外的产品名、品牌、成分信息或网络评价。",
+    "- 不允许输出“一定适合”“强烈推荐购买”等绝对化或销售导向表述。",
+    "- 若 productMatchCandidates 为空，必须输出 productMatch.fallbackTip，提醒用户先补充已有产品体验。",
     "",
     "必须严格匹配以下 JSON 结构：",
     JSON.stringify(
@@ -97,6 +119,21 @@ export function buildForYouPrompt(input: ForYouAnalysisRequest): string {
             nextStep: "string",
           },
         ],
+        productMatch: {
+          title: "string",
+          reason: "string",
+          candidates: [
+            {
+              name: "string",
+              brand: "string",
+              category: "string",
+              matchReason: "string",
+              caution: "string",
+              howToTry: "string",
+            },
+          ],
+          fallbackTip: "string (optional)",
+        },
       },
       null,
       2,

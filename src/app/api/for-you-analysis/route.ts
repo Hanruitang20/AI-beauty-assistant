@@ -55,6 +55,7 @@ function getResponseValidationHint(input: unknown): string {
   const obj = input as Record<string, unknown>;
   if (!Array.isArray(obj.currentRecommendations)) return "currentRecommendations is missing or not an array";
   if (!Array.isArray(obj.futureTips)) return "futureTips is missing or not an array";
+  if (!obj.productMatch || typeof obj.productMatch !== "object") return "productMatch is missing or not an object";
   const validAdaptations = ["推荐", "谨慎", "不推荐"];
   for (let i = 0; i < obj.currentRecommendations.length; i += 1) {
     const item = obj.currentRecommendations[i] as Record<string, unknown>;
@@ -71,6 +72,23 @@ function getResponseValidationHint(input: unknown): string {
     if (typeof item.title !== "string") return `futureTips[${i}].title is missing or not a string`;
     if (typeof item.reason !== "string") return `futureTips[${i}].reason is missing or not a string`;
     if (typeof item.nextStep !== "string") return `futureTips[${i}].nextStep is missing or not a string`;
+  }
+  const productMatch = obj.productMatch as Record<string, unknown>;
+  if (typeof productMatch.title !== "string") return "productMatch.title is missing or not a string";
+  if (typeof productMatch.reason !== "string") return "productMatch.reason is missing or not a string";
+  if (!Array.isArray(productMatch.candidates)) return "productMatch.candidates is missing or not an array";
+  for (let i = 0; i < productMatch.candidates.length; i += 1) {
+    const item = productMatch.candidates[i] as Record<string, unknown>;
+    if (!item || typeof item !== "object") return `productMatch.candidates[${i}] is not an object`;
+    if (typeof item.name !== "string") return `productMatch.candidates[${i}].name is missing or not a string`;
+    if (typeof item.brand !== "string") return `productMatch.candidates[${i}].brand is missing or not a string`;
+    if (typeof item.category !== "string") return `productMatch.candidates[${i}].category is missing or not a string`;
+    if (typeof item.matchReason !== "string") return `productMatch.candidates[${i}].matchReason is missing or not a string`;
+    if (typeof item.caution !== "string") return `productMatch.candidates[${i}].caution is missing or not a string`;
+    if (typeof item.howToTry !== "string") return `productMatch.candidates[${i}].howToTry is missing or not a string`;
+  }
+  if (typeof productMatch.fallbackTip !== "undefined" && typeof productMatch.fallbackTip !== "string") {
+    return "productMatch.fallbackTip is invalid";
   }
   return "unknown schema mismatch";
 }

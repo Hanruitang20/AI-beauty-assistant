@@ -37,6 +37,18 @@ export type ForYouAnalysisRequest = {
     intention?: string;
     feedbackNote?: string;
   }>;
+  productMatchCandidates?: Array<{
+    name: string;
+    brand: string;
+    category: string;
+    matchReason: string;
+    caution: string;
+    howToTry: string;
+  }>;
+  productMatchHint?: {
+    shouldFocusOnExistingProducts: boolean;
+    fallbackTip?: string;
+  };
   context?: {
     selectedCategory?: string;
     productCount: number;
@@ -63,6 +75,19 @@ export type ForYouAnalysisResponse = {
     reason: string;
     nextStep: string;
   }>;
+  productMatch: {
+    title: string;
+    reason: string;
+    candidates: Array<{
+      name: string;
+      brand: string;
+      category: string;
+      matchReason: string;
+      caution: string;
+      howToTry: string;
+    }>;
+    fallbackTip?: string;
+  };
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -97,6 +122,27 @@ export function validateForYouAnalysisRequest(input: unknown): input is ForYouAn
   });
   if (!experiencesValid) return false;
 
+  if (typeof input.productMatchCandidates !== "undefined") {
+    if (!Array.isArray(input.productMatchCandidates)) return false;
+    const candidatesValid = input.productMatchCandidates.every((candidate) => {
+      if (!isRecord(candidate)) return false;
+      if (typeof candidate.name !== "string") return false;
+      if (typeof candidate.brand !== "string") return false;
+      if (typeof candidate.category !== "string") return false;
+      if (typeof candidate.matchReason !== "string") return false;
+      if (typeof candidate.caution !== "string") return false;
+      if (typeof candidate.howToTry !== "string") return false;
+      return true;
+    });
+    if (!candidatesValid) return false;
+  }
+
+  if (typeof input.productMatchHint !== "undefined") {
+    if (!isRecord(input.productMatchHint)) return false;
+    if (typeof input.productMatchHint.shouldFocusOnExistingProducts !== "boolean") return false;
+    if (typeof input.productMatchHint.fallbackTip !== "undefined" && typeof input.productMatchHint.fallbackTip !== "string") return false;
+  }
+
   if (typeof input.context !== "undefined") {
     if (!isRecord(input.context)) return false;
     if (typeof input.context.productCount !== "number") return false;
@@ -111,6 +157,7 @@ export function validateForYouAnalysisResponse(input: unknown): input is ForYouA
   if (!isRecord(input)) return false;
   if (!Array.isArray(input.currentRecommendations)) return false;
   if (!Array.isArray(input.futureTips)) return false;
+  if (!isRecord(input.productMatch)) return false;
 
   const validAdaptations = ["推荐", "谨慎", "不推荐"];
   const currentRecommendationsValid = input.currentRecommendations.every((item) => {
@@ -131,5 +178,22 @@ export function validateForYouAnalysisResponse(input: unknown): input is ForYouA
     if (typeof item.nextStep !== "string") return false;
     return true;
   });
-  return futureTipsValid;
+  if (!futureTipsValid) return false;
+
+  if (!Array.isArray(input.productMatch.candidates)) return false;
+  if (typeof input.productMatch.title !== "string") return false;
+  if (typeof input.productMatch.reason !== "string") return false;
+  if (typeof input.productMatch.fallbackTip !== "undefined" && typeof input.productMatch.fallbackTip !== "string") return false;
+
+  const productMatchCandidatesValid = input.productMatch.candidates.every((item) => {
+    if (!isRecord(item)) return false;
+    if (typeof item.name !== "string") return false;
+    if (typeof item.brand !== "string") return false;
+    if (typeof item.category !== "string") return false;
+    if (typeof item.matchReason !== "string") return false;
+    if (typeof item.caution !== "string") return false;
+    if (typeof item.howToTry !== "string") return false;
+    return true;
+  });
+  return productMatchCandidatesValid;
 }
